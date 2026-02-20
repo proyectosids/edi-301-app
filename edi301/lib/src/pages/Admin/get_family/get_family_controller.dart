@@ -6,10 +6,8 @@ class GetFamilyController {
   late BuildContext context;
   final FamiliaApi _familiaApi = FamiliaApi();
 
-  // Lista completa de familias (la fuente de la verdad)
   List<dynamic> _allFamilies = [];
 
-  // Lista filtrada que se muestra en pantalla
   ValueNotifier<List<dynamic>> families = ValueNotifier([]);
   ValueNotifier<bool> isLoading = ValueNotifier(false);
 
@@ -21,11 +19,10 @@ class GetFamilyController {
   Future<void> loadFamilies() async {
     isLoading.value = true;
     try {
-      // Usamos el endpoint que ya ordena por num_alumnos
       final data = await _familiaApi.getAvailable();
       if (data != null) {
         _allFamilies = List<dynamic>.from(data);
-        // Inicialmente mostramos todas
+
         families.value = _allFamilies;
       }
     } catch (e) {
@@ -52,7 +49,6 @@ class GetFamilyController {
   }
 
   void goToDetail(dynamic familia) {
-    // Asumiendo que 'family_detail' es la ruta de admin para ver detalles
     Navigator.pushNamed(
       context,
       'family_detail',

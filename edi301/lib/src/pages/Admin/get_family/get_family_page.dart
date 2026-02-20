@@ -25,7 +25,6 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
     });
   }
 
-  // Función robusta para URLs (Misma que usamos en family_page)
   String _absUrl(String raw) {
     if (raw.isEmpty || raw == 'null') return '';
     var s = raw.trim();
@@ -132,7 +131,6 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
     final int numAlumnos = f['num_alumnos'] ?? 0;
     final bool estaLleno = numAlumnos >= 10;
 
-    // Preparar imágenes
     final portadaRaw = (f['portada'] ?? f['foto_portada_url'] ?? '').toString();
     final portadaAbs = _absUrl(portadaRaw);
 
@@ -145,7 +143,6 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
         onTap: () => _controller.goToDetail(f),
         child: Column(
           children: [
-            // === FOTO DE PORTADA CON OVERLAY ===
             Stack(
               children: [
                 SizedBox(
@@ -165,12 +162,7 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                           ),
                         )
                       : Container(
-                          color: const Color.fromRGBO(
-                            19,
-                            67,
-                            107,
-                            0.2,
-                          ), // Azul clarito institucional
+                          color: const Color.fromRGBO(19, 67, 107, 0.2),
                           child: const Icon(
                             Icons.image_not_supported,
                             color: Colors.grey,
@@ -178,7 +170,6 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                           ),
                         ),
                 ),
-                // Gradiente para que el texto se lea mejor si quisieras ponerlo encima
                 if (estaLleno)
                   Container(
                     height: 150,
@@ -206,7 +197,6 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
               ],
             ),
 
-            // === INFORMACIÓN DE LA TARJETA ===
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -227,7 +217,6 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // Badge de conteo de alumnos
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -289,7 +278,7 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                     ],
                   ),
 
-                  // Descripción (si existe)
+                  // Descripción
                   if (f['descripcion'] != null &&
                       f['descripcion'].toString().isNotEmpty) ...[
                     const SizedBox(height: 8),

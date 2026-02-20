@@ -35,7 +35,6 @@ class FamilyController {
   }
 
   Future<int?> _resolveFamilyId() async {
-    // 1. Intentamos leer del caché local (SharedPreferences)
     final cachedId = await _readFamilyIdFromSession();
     if (cachedId != null && cachedId > 0) {
       debugPrint(
@@ -44,7 +43,6 @@ class FamilyController {
       return cachedId;
     }
 
-    // 2. Si no está en caché, consultamos a la API directamente
     debugPrint(
       'FamilyController: ID no encontrado en sesión, consultando API...',
     );
@@ -58,8 +56,7 @@ class FamilyController {
 
     try {
       final dynamic decoded = jsonDecode(rawUser);
-      // Imprimir para depurar qué está guardado en el celular
-      // debugPrint('USER DATA EN CACHÉ: $decoded');
+
       return _extractFamilyId(decoded);
     } catch (e) {
       debugPrint('Error parseando usuario de sesión: $e');
@@ -70,9 +67,7 @@ class FamilyController {
   int? _extractFamilyId(dynamic data) {
     if (data == null) return null;
 
-    // 1. Búsqueda directa (Más rápida y segura)
     if (data is Map) {
-      // Lista de posibles nombres de la columna en la BD o JSON
       const keys = [
         'id_familia',
         'familia_id',
@@ -87,7 +82,6 @@ class FamilyController {
         }
       }
 
-      // A veces viene anidado en un objeto 'familia'
       if (data['familia'] is Map) {
         final nestedId = _asInt(
           data['familia']['id_familia'] ?? data['familia']['id'],
@@ -96,11 +90,10 @@ class FamilyController {
       }
     }
 
-    // 2. Búsqueda recursiva (Tu lógica original, como respaldo)
     if (data is Map) {
       for (final entry in data.entries) {
         final key = entry.key.toString().toLowerCase();
-        // Evitamos falsos positivos con claves que contengan "id" pero no sean lo que buscamos
+
         if (key.contains('familia') && key.contains('id')) {
           final parsed = _asInt(entry.value);
           if (parsed != null && parsed > 0) return parsed;
@@ -148,7 +141,6 @@ class FamilyController {
         user['num_empleado'] ?? user['numEmpleado'] ?? user['NumEmpleado'],
       );
 
-      // Si no tiene ni matrícula ni número de empleado, quizás es un padre registrado solo por ID
       if (matricula == null && numEmpleado == null) {
         debugPrint('FamilyController: Usuario sin matrícula ni num_empleado.');
         return null;

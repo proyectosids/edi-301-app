@@ -18,8 +18,7 @@ class EditPage extends StatefulWidget {
 class _EditPageState extends State<EditPage> {
   String? _currentProfileUrl;
   String? _currentCoverUrl;
-  final String _baseUrl =
-      ApiHttp.baseUrl; // Asegúrate que esta URL no termine en '/'
+  final String _baseUrl = ApiHttp.baseUrl;
 
   final EditController _controller = EditController();
 
@@ -40,7 +39,6 @@ class _EditPageState extends State<EditPage> {
     }
   }
 
-  // Función auxiliar para construir URLs válidas
   String _buildUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
@@ -60,7 +58,6 @@ class _EditPageState extends State<EditPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // ================= SECCIÓN FOTO DE PERFIL =================
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -105,7 +102,6 @@ class _EditPageState extends State<EditPage> {
                 },
               ),
 
-              // ================= SECCIÓN FOTO DE PORTADA =================
               const SizedBox(height: 15),
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -154,7 +150,6 @@ class _EditPageState extends State<EditPage> {
                 ),
               ),
 
-              // ================= SECCIÓN DESCRIPCIÓN =================
               const SizedBox(height: 30),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -197,7 +192,6 @@ class _EditPageState extends State<EditPage> {
               ),
               const SizedBox(height: 30),
 
-              // ================= BOTÓN GUARDAR =================
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ValueListenableBuilder<bool>(
@@ -237,7 +231,6 @@ class _EditPageState extends State<EditPage> {
     );
   }
 
-  // Lógica segura para imagen de perfil
   Widget _buildProfileImage(XFile? newImage) {
     if (newImage != null) {
       return Image.file(File(newImage.path), fit: BoxFit.cover);
@@ -249,7 +242,6 @@ class _EditPageState extends State<EditPage> {
         url,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          // SI FALLA LA URL, MUESTRA LA IMAGEN POR DEFECTO
           return Image.asset(
             'assets/img/los-24-mandamientos-de-la-familia-feliz-lg.jpg',
             fit: BoxFit.cover,
@@ -264,7 +256,6 @@ class _EditPageState extends State<EditPage> {
     );
   }
 
-  // Lógica segura para imagen de portada
   Widget _buildCoverImage(XFile? newImage) {
     if (newImage != null) {
       return Image.file(
@@ -283,7 +274,6 @@ class _EditPageState extends State<EditPage> {
         height: 200,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          // SI FALLA LA URL, MUESTRA LA IMAGEN POR DEFECTO
           return Image.asset(
             'assets/img/familia-extensa-e1591818033557.jpg',
             width: double.infinity,

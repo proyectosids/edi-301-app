@@ -27,7 +27,6 @@ import 'package:edi301/src/pages/Admin/agenda/agenda_page.dart';
 import 'package:edi301/src/pages/Admin/agenda/crear_evento_page.dart';
 import 'package:edi301/src/pages/Admin/reportes/reportes_page.dart';
 
-// 1. IMPORTA TU NUEVO SERVICIO DE SOCKETS
 import 'package:edi301/services/socket_service.dart';
 
 @pragma('vm:entry-point')
@@ -42,8 +41,6 @@ void main() async {
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // 2. INICIALIZA EL SOCKET AL ARRANCAR
-  // Esto permite que el socket empiece a conectar mientras carga el resto de la app
   SocketService().initSocket();
 
   final notiService = NotificationService();

@@ -19,7 +19,7 @@ class FotosApi {
       }
       return [];
     } catch (e) {
-      print("⚠️ Error obteniendo galería: $e");
+      print("Error obteniendo galería: $e");
       return [];
     }
   }

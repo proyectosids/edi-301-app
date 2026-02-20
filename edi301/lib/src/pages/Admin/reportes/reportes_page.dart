@@ -100,7 +100,6 @@ class _ReportesPageState extends State<ReportesPage> {
       body: ResponsiveContent(
         child: Column(
           children: [
-            // === BOTÓN REPORTE GENERAL ===
             Padding(
               padding: const EdgeInsets.all(16),
               child: ElevatedButton.icon(
@@ -130,10 +129,8 @@ class _ReportesPageState extends State<ReportesPage> {
 
             const Divider(thickness: 2),
 
-            // === BUSCADOR ===
             _textFieldSearch(),
 
-            // === LISTA DE FAMILIAS ===
             Expanded(
               child: ValueListenableBuilder<bool>(
                 valueListenable: _controller.isLoading,
@@ -166,7 +163,7 @@ class _ReportesPageState extends State<ReportesPage> {
       margin: const EdgeInsets.fromLTRB(10, 10, 10, 20),
       child: TextField(
         controller: _searchCtrl,
-        // Conectamos el cambio de texto al filtro del controlador nuevo
+
         onChanged: _controller.onSearchChanged,
         decoration: InputDecoration(
           hintText: 'Buscar familia por nombre o padres...',

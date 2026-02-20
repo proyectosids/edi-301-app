@@ -9,7 +9,6 @@ class AddTutorController {
   final correoCtrl = TextEditingController();
   final contrasenaCtrl = TextEditingController();
 
-  // 2 = PapaEDI, 3 = MamaEDI (Basado en tu script SQL)
   final idRolSeleccionado = ValueNotifier<int>(2);
   final loading = ValueNotifier<bool>(false);
 
@@ -36,7 +35,6 @@ class AddTutorController {
     loading.value = true;
 
     try {
-      // Es probable que registerExterno devuelva un Dynamic o un Response
       final result = await _usersApi.registerExterno(
         nombre: nombre,
         apellido: apellido,
@@ -45,7 +43,6 @@ class AddTutorController {
         idRol: idRolSeleccionado.value,
       );
 
-      // Si llegó aquí sin lanzar excepción, el registro en el backend fue exitoso
       if (context.mounted) {
         loading.value = false;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -58,7 +55,7 @@ class AddTutorController {
       }
     } catch (e) {
       loading.value = false;
-      // Si el backend responde 201 y UsersApi lanza error, hay que atraparlo aquí
+
       print("Error detectado en Flutter: $e");
       _snack(
         context,

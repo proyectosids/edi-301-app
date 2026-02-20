@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:edi301/services/chat_api.dart';
-import 'package:edi301/services/socket_service.dart'; // Importa el servicio de sockets
+import 'package:edi301/services/socket_service.dart';
 
 class ChatPage extends StatefulWidget {
   final int idSala;
@@ -14,8 +14,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final ChatApi _api = ChatApi();
-  final SocketService _socketService =
-      SocketService(); // Instancia del servicio
+  final SocketService _socketService = SocketService();
   final TextEditingController _msgCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
 
@@ -26,12 +25,11 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     _loadMessages();
-    _setupSocketListeners(); // Configura la escucha en tiempo real
+    _setupSocketListeners();
   }
 
   @override
   void dispose() {
-    // Es vital limpiar los listeners para evitar fugas de memoria en tu Mac M4
     _socketService.socket.off('nuevo_mensaje');
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
@@ -43,7 +41,6 @@ class _ChatPageState extends State<ChatPage> {
 
     _socketService.socket.on('nuevo_mensaje', (data) {
       if (mounted) {
-        // OPTIMIZADO: Evitar duplicados comparando IDs (si el back envía id_mensaje)
         final yaExiste = _mensajes.any(
           (m) => m['id_mensaje'] == data['id_mensaje'],
         );
@@ -87,8 +84,6 @@ class _ChatPageState extends State<ChatPage> {
 
     _msgCtrl.clear();
 
-    // Al enviar el mensaje, el servidor lo guardará y lo emitirá por Socket
-    // a todos los conectados, incluyéndote a ti.
     final success = await _api.sendMessage(widget.idSala, text);
 
     if (!success) {
@@ -118,7 +113,7 @@ class _ChatPageState extends State<ChatPage> {
                     itemCount: _mensajes.length,
                     itemBuilder: (ctx, i) {
                       final msg = _mensajes[i];
-                      // Verificamos si el mensaje es del usuario actual
+
                       final esMio = msg['es_mio'] == 1 || msg['es_mio'] == true;
 
                       return Align(
@@ -172,7 +167,6 @@ class _ChatPageState extends State<ChatPage> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              // OPTIMIZADO: Sombra sutil para separar del chat
               color: Colors.white,
               boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
             ),
@@ -181,8 +175,7 @@ class _ChatPageState extends State<ChatPage> {
                 Expanded(
                   child: TextField(
                     controller: _msgCtrl,
-                    textInputAction: TextInputAction
-                        .send, // OPTIMIZADO: Cambia icono del teclado
+                    textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _sendMessage(),
                     decoration: InputDecoration(
                       hintText: "Escribe un mensaje...",

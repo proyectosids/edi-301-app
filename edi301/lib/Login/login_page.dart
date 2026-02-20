@@ -73,12 +73,7 @@ class _LoginPageState extends State<LoginPage> {
         child: const Text(
           '¿Olvidaste tu contraseña?',
           style: TextStyle(
-            color: Color.fromRGBO(
-              245,
-              188,
-              6,
-              1,
-            ), // Tu color amarillo para resaltar
+            color: Color.fromRGBO(245, 188, 6, 1),
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),

@@ -14,14 +14,13 @@ class CreateEventPage extends StatefulWidget {
 }
 
 class _CreateEventPageState extends State<CreateEventPage> {
-  // Instanciamos el controlador
   final AgendaController _controller = AgendaController();
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    // 👇 Inicializamos el controlador pasándole el evento (si existe)
+
     _controller.init(context, evento: widget.eventoExistente);
   }
 
@@ -67,7 +66,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
   Widget build(BuildContext context) {
     final esEdicion = widget.eventoExistente != null;
 
-    // Determinar la imagen a mostrar
     ImageProvider? imagenProvider;
     if (_controller.imagenSeleccionada != null) {
       imagenProvider = FileImage(_controller.imagenSeleccionada!);
@@ -142,7 +140,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
                 const SizedBox(height: 20),
 
-                // Título (Usamos el del controller)
                 TextField(
                   controller: _controller.tituloCtrl,
                   decoration: const InputDecoration(
@@ -153,7 +150,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
                 ),
                 const SizedBox(height: 15),
 
-                // Descripción (Usamos el del controller)
                 TextField(
                   controller: _controller.descCtrl,
                   maxLines: 3,
@@ -205,7 +201,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
                 ),
                 const SizedBox(height: 15),
 
-                // Días Anticipación (Usamos el del controller)
                 TextField(
                   controller: _controller.recordatorioDiasAntesCtrl,
                   keyboardType: TextInputType.number,

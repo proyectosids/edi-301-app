@@ -10,10 +10,10 @@ class ApiHttp extends http.BaseClient {
   static final ApiHttp _i = ApiHttp._internal();
   factory ApiHttp() => _i;
 
-  // DEV
+  // dev
   //static const String baseUrl = 'http://192.168.130.191:3000';
 
-  // PROD
+  // prod
   static const String baseUrl = 'https://edi301.apps.isdapps.uk';
 
   final http.Client _inner = http.Client();

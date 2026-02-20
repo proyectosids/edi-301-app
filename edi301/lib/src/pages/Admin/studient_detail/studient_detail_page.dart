@@ -3,7 +3,7 @@ import 'package:edi301/src/widgets/responsive_content.dart';
 import 'package:flutter/material.dart';
 import 'package:edi301/core/api_client_http.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart'; // Librería para formatear fechas
+import 'package:intl/intl.dart';
 
 class StudentDetailPage extends StatefulWidget {
   const StudentDetailPage({super.key});
@@ -61,16 +61,13 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
     }
   }
 
-  // Método para formatear la fecha de nacimiento
   String _formatFecha(String? fechaRaw) {
     if (fechaRaw == null || fechaRaw.isEmpty || fechaRaw == '—') return '—';
     try {
       DateTime fecha = DateTime.parse(fechaRaw);
       return DateFormat('dd/MM/yyyy').format(fecha);
     } catch (e) {
-      return fechaRaw.split(
-        'T',
-      )[0]; // Fallback: quita la parte de la hora manualmente
+      return fechaRaw.split('T')[0];
     }
   }
 
@@ -121,7 +118,7 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
     final name = ('${s('nombre')} ${s('apellido')}').trim();
     final phone = s('telefono');
     final matricula = s('matricula');
-    final birthday = _formatFecha(s('fecha_nacimiento')); // Fecha formateada
+    final birthday = _formatFecha(s('fecha_nacimiento'));
     final status = s('estado', 'Activo');
     final grade = s('carrera');
     final email = s('correo');
@@ -224,7 +221,6 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
           ),
           const SizedBox(height: 12),
 
-          // Se eliminó la sección de botones de llamada y mensaje
           const SizedBox(height: 8),
           if (_studentId != null)
             Align(

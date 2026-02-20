@@ -2,24 +2,21 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:edi301/services/eventos_api.dart';
 import 'package:edi301/tools/generic_reminders.dart' as reminders_tool;
-import 'package:edi301/core/api_client_http.dart'; // Necesario para la URL base
+import 'package:edi301/core/api_client_http.dart';
 
 class AgendaController {
   late BuildContext context;
   final EventosApi _api = EventosApi();
   final loading = ValueNotifier<bool>(false);
 
-  // Variable para almacenar el ID si estamos editando
   int? _idEvento;
 
-  // Controladores del formulario
   final tituloCtrl = TextEditingController();
   final descCtrl = TextEditingController();
   final recordatorioDiasAntesCtrl = TextEditingController(text: '3');
 
-  // Variables de Estado
   File? imagenSeleccionada;
-  String? imagenUrlRemota; // Para mostrar la imagen que ya tiene el evento
+  String? imagenUrlRemota;
 
   DateTime? fechaEvento;
   TimeOfDay? horaEvento;
@@ -28,30 +25,25 @@ class AgendaController {
   final recordatorioHoraCtrl = TextEditingController(text: '13:00');
   String recordatorioTipo = 'DAY';
 
-  // 👇 MODIFICADO: init ahora acepta el evento opcional
   void init(BuildContext context, {Map<String, dynamic>? evento}) {
     this.context = context;
 
     if (evento != null) {
-      // --- MODO EDICIÓN: Cargar datos ---
       _idEvento = evento['id_evento'] ?? evento['id_actividad'];
       tituloCtrl.text = evento['titulo'] ?? '';
       descCtrl.text = evento['mensaje'] ?? evento['descripcion'] ?? '';
       recordatorioDiasAntesCtrl.text = (evento['dias_anticipacion'] ?? 3)
           .toString();
-      imagenUrlRemota = evento['imagen']; // Guardamos URL
+      imagenUrlRemota = evento['imagen'];
 
-      // Cargar Fecha
       if (evento['fecha_evento'] != null) {
         fechaEvento = DateTime.tryParse(evento['fecha_evento'].toString());
       } else {
         fechaEvento = DateTime.now();
       }
 
-      // Cargar Hora
       if (evento['hora_evento'] != null) {
         try {
-          // Asumiendo formato "HH:mm:ss" o "HH:mm"
           final parts = evento['hora_evento'].toString().split(':');
           if (parts.length >= 2) {
             horaEvento = TimeOfDay(
@@ -64,7 +56,6 @@ class AgendaController {
         }
       }
     } else {
-      // --- MODO CREACIÓN: Limpiar ---
       _idEvento = null;
       tituloCtrl.clear();
       descCtrl.clear();

@@ -138,7 +138,6 @@ class _PerfilPageState extends State<PerfilPage> {
       String nombre = (u['nombre'] ?? u['Nombre'] ?? '').toString();
       String apellido = (u['apellido'] ?? u['Apellido'] ?? '').toString();
 
-      // ✅ FIX: normaliza avatar también en local (antes quedaba "/uploads/..")
       String avatar = (u['foto_perfil'] ?? u['FotoPerfil'] ?? '').toString();
       if (avatar.isNotEmpty && !avatar.startsWith('http')) {
         avatar = '${ApiHttp.baseUrl}$avatar';
@@ -170,7 +169,6 @@ class _PerfilPageState extends State<PerfilPage> {
         };
       });
     } catch (e) {
-      // ignore: avoid_print
       print("Error cargando perfil local: $e");
     }
   }

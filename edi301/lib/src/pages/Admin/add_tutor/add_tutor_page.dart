@@ -37,7 +37,6 @@ class _AddTutorPageState extends State<AddTutorPage> {
             ),
             const SizedBox(height: 20),
 
-            // Tipo de Tutor (Radio Buttons)
             const Text(
               'Relación:',
               style: TextStyle(fontWeight: FontWeight.bold),

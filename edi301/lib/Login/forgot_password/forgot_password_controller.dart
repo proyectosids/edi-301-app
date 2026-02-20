@@ -49,7 +49,7 @@ class ForgotPasswordController {
         otpCtrl.text.trim(),
       );
       if (valid) {
-        step.value = 2; // Pasar a nueva contraseña
+        step.value = 2;
       } else {
         _snack(context, 'Código incorrecto');
       }

@@ -38,7 +38,6 @@ class _FamilyPageState extends State<FamiliyPage> {
     _availableFamiliesFuture = _fetchAvailableFamilies();
   }
 
-  // ========= FIX 1: URL robusta para imágenes =========
   String _absUrl(String raw) {
     if (raw.isEmpty || raw == 'null') return '';
     var s = raw.trim();
@@ -64,7 +63,6 @@ class _FamilyPageState extends State<FamiliyPage> {
     return '${ApiHttp.baseUrl}$s';
   }
 
-  // ========= FIX 2: lee keys snake/camel =========
   String _pickField(dynamic obj, List<String> keys) {
     if (obj == null) return '';
     for (final k in keys) {
@@ -642,7 +640,6 @@ class _FamilyPageState extends State<FamiliyPage> {
       itemBuilder: (context, index) {
         final hijo = hijos[index];
 
-        // LÓGICA DE FOTO CORREGIDA
         String imageUrl;
         final rawUrl = hijo.fotoPerfil ?? '';
 
@@ -659,7 +656,7 @@ class _FamilyPageState extends State<FamiliyPage> {
         }
 
         return ProfileCard(
-          imageUrl: imageUrl, // Se pasa la URL válida (local o remota)
+          imageUrl: imageUrl,
           name: hijo.fullName,
           school: hijo.carrera,
           fechaNacimiento: hijo.fechaNacimiento,
@@ -843,7 +840,6 @@ class ProfileCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Aquí usamos Image.network en vez de backgroundImage para mejor control si la URL es remota
             ClipOval(
               child: Image.network(
                 imageUrl,

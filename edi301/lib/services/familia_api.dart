@@ -190,7 +190,7 @@ class FamiliaApi {
 
   Future<List<dynamic>?> getAvailable() async {
     final res = await _http.getJson('/api/familias/available');
-    print('DEBUG BODY: ${res.body}'); // Revisa esto en la consola de VS Code
+    print('DEBUG BODY: ${res.body}');
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
       if (decoded is List) return decoded;
