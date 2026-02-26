@@ -2,6 +2,7 @@ import 'package:edi301/src/widgets/responsive_content.dart';
 import 'package:flutter/material.dart';
 import 'package:edi301/models/family_model.dart';
 import 'package:edi301/services/familia_api.dart';
+import 'package:edi301/services/socket_service.dart';
 import 'package:edi301/services/members_api.dart';
 import 'package:edi301/src/pages/Admin/add_alumns/add_alumns_controller.dart';
 import 'package:edi301/services/search_api.dart';
@@ -14,6 +15,9 @@ class FamilyDetailPage extends StatefulWidget {
 }
 
 class _FamilyDetailPageState extends State<FamilyDetailPage> {
+  final SocketService _socketService = SocketService();
+  bool _realtimeSetup = false;
+  int? _rtFamilyId;
   Family? _family;
   bool _isLoading = true;
   String? _error;
@@ -33,7 +37,37 @@ class _FamilyDetailPageState extends State<FamilyDetailPage> {
       }
 
       if (familyId != null) {
-        _fetchFamilyDetails(familyId);
+        // ✅ Fijar a no-null para usarlo dentro de closures sin errores de null-safety.
+        final int fid = familyId;
+        if (!_realtimeSetup || _rtFamilyId != familyId) {
+          _socketService.initSocket();
+          _socketService.joinFamilyRoom(fid);
+
+          _socketService.socket.off('miembro_agregado');
+          _socketService.socket.on('miembro_agregado', (_) {
+            if (mounted) _fetchFamilyDetails(fid);
+          });
+
+          _socketService.socket.off('miembro_eliminado');
+          _socketService.socket.on('miembro_eliminado', (_) {
+            if (mounted) _fetchFamilyDetails(fid);
+          });
+
+          _socketService.socket.off('miembros_actualizados');
+          _socketService.socket.on('miembros_actualizados', (_) {
+            if (mounted) _fetchFamilyDetails(fid);
+          });
+
+          _socketService.socket.off('nuevos_alumnos_asignados');
+          _socketService.socket.on('nuevos_alumnos_asignados', (_) {
+            if (mounted) _fetchFamilyDetails(fid);
+          });
+
+          _realtimeSetup = true;
+          _rtFamilyId = fid;
+        }
+
+        _fetchFamilyDetails(fid);
       } else {
         setState(() {
           _isLoading = false;

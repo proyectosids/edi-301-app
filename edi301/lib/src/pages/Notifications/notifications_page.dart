@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edi301/services/publicaciones_api.dart';
 import 'package:edi301/core/api_client_http.dart';
+import 'package:edi301/services/socket_service.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -12,11 +13,17 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
+  final SocketService _socketService = SocketService();
+
   final PublicacionesApi _api = PublicacionesApi();
   List<dynamic> _items = [];
   bool _loading = true;
   String _userRole = '';
   bool _esPadre = false;
+
+  int? _userId;
+  int? _familiaId;
+  bool _realtimeSetup = false;
 
   @override
   void initState() {
@@ -31,6 +38,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (userStr != null) {
       final user = jsonDecode(userStr);
       final rol = user['nombre_rol'] ?? user['rol'] ?? '';
+
+      final int? userId =
+          (user['id_usuario'] ?? user['id'] ?? user['ID'] ?? user['Id']) is int
+          ? (user['id_usuario'] ?? user['id'] ?? user['ID'] ?? user['Id'])
+          : int.tryParse(
+              (user['id_usuario'] ??
+                      user['id'] ??
+                      user['ID'] ??
+                      user['Id'] ??
+                      '')
+                  .toString(),
+            );
+      final int? familiaId = (user['id_familia'] ?? user['FamiliaID']) is int
+          ? (user['id_familia'] ?? user['FamiliaID'])
+          : int.tryParse(
+              (user['id_familia'] ?? user['FamiliaID'] ?? '').toString(),
+            );
       final esJuez = [
         'Admin',
         'Padre',
@@ -43,9 +67,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
       List<dynamic> datos = [];
 
       if (esJuez) {
-        final idFamilia = user['id_familia'] ?? user['FamiliaID'];
-        if (idFamilia != null) {
-          datos = await _api.getPendientes(int.parse(idFamilia.toString()));
+        if (familiaId != null) {
+          datos = await _api.getPendientes(familiaId);
         }
       } else {
         datos = await _api.getMisPosts();
@@ -56,8 +79,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
           _userRole = rol;
           _esPadre = esJuez;
           _items = datos;
+          _userId = userId;
+          _familiaId = familiaId;
           _loading = false;
         });
+
+        // ✅ Configurar realtime una sola vez cuando ya tenemos IDs.
+        if (!_realtimeSetup) {
+          _setupRealtime();
+          _realtimeSetup = true;
+        }
       }
     }
   }
@@ -81,6 +112,38 @@ class _NotificationsPageState extends State<NotificationsPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text("Error al procesar")));
     }
+  }
+
+  void _setupRealtime() {
+    _socketService.initSocket();
+
+    if (_userId != null) _socketService.joinUserRoom(_userId!);
+    if (_familiaId != null) _socketService.joinFamilyRoom(_familiaId!);
+
+    _socketService.socket.off('post_pendiente_creado');
+    _socketService.socket.on('post_pendiente_creado', (_) {
+      if (mounted) _loadData();
+    });
+
+    _socketService.socket.off('post_estado_actualizado');
+    _socketService.socket.on('post_estado_actualizado', (_) {
+      if (mounted) _loadData();
+    });
+
+    _socketService.socket.off('mi_post_estado_actualizado');
+    _socketService.socket.on('mi_post_estado_actualizado', (_) {
+      if (mounted) _loadData();
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_socketService.isReady) {
+      _socketService.socket.off('post_pendiente_creado');
+      _socketService.socket.off('post_estado_actualizado');
+      _socketService.socket.off('mi_post_estado_actualizado');
+    }
+    super.dispose();
   }
 
   @override

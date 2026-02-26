@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:edi301/core/api_client_http.dart';
 import 'package:edi301/services/fotos_api.dart';
+import 'package:edi301/services/socket_service.dart';
 
 class FamilyGallery extends StatefulWidget {
   final int idFamilia;
@@ -12,6 +13,7 @@ class FamilyGallery extends StatefulWidget {
 }
 
 class _FamilyGalleryState extends State<FamilyGallery> {
+  final SocketService _socketService = SocketService();
   final FotosApi _api = FotosApi();
   List<dynamic> _fotos = [];
   bool _loading = true;
@@ -50,6 +52,15 @@ class _FamilyGalleryState extends State<FamilyGallery> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    if (_socketService.isReady) {
+      _socketService.socket.off('foto_agregada');
+    }
+    _socketService.leaveRoom('familia_${widget.idFamilia}');
+    super.dispose();
   }
 
   @override

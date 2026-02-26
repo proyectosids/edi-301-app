@@ -5,6 +5,7 @@ import 'package:edi301/src/pages/Admin/agenda/crear_evento_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:edi301/services/socket_service.dart';
 import 'package:edi301/src/pages/News/news_controller.dart';
 import 'package:edi301/src/pages/News/create_postpage.dart';
 
@@ -16,6 +17,8 @@ class NewsPage extends StatefulWidget {
 }
 
 class _NewsPageState extends State<NewsPage> {
+  final SocketService _socketService = SocketService();
+
   final HomeController _controller = HomeController();
   final PublicacionesApi _api = PublicacionesApi();
   final ApiHttp _http = ApiHttp();
@@ -38,6 +41,7 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<void> _initData() async {
     await _loadUserData();
+    _setupRealtime();
     _loadFeed();
   }
 
@@ -55,6 +59,55 @@ class _NewsPageState extends State<NewsPage> {
         });
       }
     }
+  }
+
+  void _setupRealtime() {
+    _socketService.initSocket();
+
+    if (_userId != null) {
+      _socketService.joinUserRoom(_userId!);
+    }
+    _socketService.joinInstitucionalRoom();
+
+    if (_familiaId != null) {
+      _socketService.joinFamilyRoom(_familiaId!);
+    }
+
+    // Evitar listeners duplicados
+    _socketService.socket.off('feed_actualizado');
+    _socketService.socket.on('feed_actualizado', (_) {
+      if (mounted) _loadFeed();
+    });
+
+    _socketService.socket.off('post_creado');
+    _socketService.socket.on('post_creado', (_) {
+      if (mounted) _loadFeed();
+    });
+
+    _socketService.socket.off('post_eliminado');
+    _socketService.socket.on('post_eliminado', (_) {
+      if (mounted) _loadFeed();
+    });
+
+    _socketService.socket.off('post_estado_actualizado');
+    _socketService.socket.on('post_estado_actualizado', (_) {
+      if (mounted) _loadFeed();
+    });
+
+    _socketService.socket.off('evento_creado');
+    _socketService.socket.on('evento_creado', (_) {
+      if (mounted) _loadFeed();
+    });
+
+    _socketService.socket.off('evento_actualizado');
+    _socketService.socket.on('evento_actualizado', (_) {
+      if (mounted) _loadFeed();
+    });
+
+    _socketService.socket.off('evento_eliminado');
+    _socketService.socket.on('evento_eliminado', (_) {
+      if (mounted) _loadFeed();
+    });
   }
 
   Future<void> _loadFeed() async {
@@ -380,12 +433,15 @@ class _NewsPageState extends State<NewsPage> {
     final nombreFamilia = post['nombre_familia'];
     final mensaje = post['mensaje'] ?? '';
     final urlImagen = post['url_imagen'];
+    // final tiempo = _timeAgo(post['created_at']); // (Opcional si quieres usarlo)
     final esMiPost = post['id_usuario'] == _userId;
 
+    // CORRECCIÓN: Asegurar que sean int
     final likesCount = int.tryParse(post['likes_count'].toString()) ?? 0;
     final comentariosCount =
         int.tryParse(post['comentarios_count'].toString()) ?? 0;
 
+    // CORRECCIÓN: Manejo robusto del booleano is_liked
     final isLiked = post['is_liked'] == 1 || post['is_liked'] == true;
 
     final esCumple =
@@ -421,6 +477,7 @@ class _NewsPageState extends State<NewsPage> {
               ),
             ),
 
+          // Header del Post (Avatar y Nombre)
           ListTile(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
@@ -472,6 +529,7 @@ class _NewsPageState extends State<NewsPage> {
                       : null),
           ),
 
+          // Imagen del Post (CON CORRECCIÓN DE ERROR 404)
           if (urlImagen != null &&
               urlImagen.toString().isNotEmpty &&
               urlImagen != 'null')
@@ -481,7 +539,7 @@ class _NewsPageState extends State<NewsPage> {
                 _fixUrl(urlImagen),
                 fit: BoxFit.cover,
                 width: double.infinity,
-
+                // height: 300, // Puedes descomentar esto si quieres altura fija
                 loadingBuilder: (ctx, child, progress) {
                   if (progress == null) return child;
                   return Container(
@@ -490,9 +548,9 @@ class _NewsPageState extends State<NewsPage> {
                     child: const Center(child: CircularProgressIndicator()),
                   );
                 },
-
+                // AQUÍ ESTÁ LA MAGIA PARA EVITAR EL CRASH 404
                 errorBuilder: (context, error, stackTrace) {
-                  print("Error cargando imagen: $error");
+                  print("Error cargando imagen: $error"); // Solo log interno
                   return Container(
                     height: 150,
                     width: double.infinity,
@@ -522,6 +580,7 @@ class _NewsPageState extends State<NewsPage> {
               child: Text(mensaje, style: const TextStyle(fontSize: 15)),
             ),
 
+          // NUEVO: Barra de Acciones (Like y Comentar)
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),

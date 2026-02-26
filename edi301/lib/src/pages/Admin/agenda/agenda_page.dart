@@ -2,6 +2,7 @@
 import 'package:edi301/src/widgets/responsive_content.dart';
 import 'package:flutter/material.dart';
 import 'package:edi301/services/eventos_api.dart';
+import 'package:edi301/services/socket_service.dart';
 
 class AgendaPage extends StatefulWidget {
   const AgendaPage({super.key});
@@ -11,12 +12,29 @@ class AgendaPage extends StatefulWidget {
 }
 
 class _AgendaPageState extends State<AgendaPage> {
+  final SocketService _socketService = SocketService();
   final EventosApi _api = EventosApi();
   late Future<List<Evento>> _eventosFuture;
 
   @override
   void initState() {
     super.initState();
+    _socketService.initSocket();
+    _socketService.joinInstitucionalRoom();
+
+    _socketService.socket.off('evento_creado');
+    _socketService.socket.on('evento_creado', (_) {
+      if (mounted) _loadEventos();
+    });
+    _socketService.socket.off('evento_actualizado');
+    _socketService.socket.on('evento_actualizado', (_) {
+      if (mounted) _loadEventos();
+    });
+    _socketService.socket.off('evento_eliminado');
+    _socketService.socket.on('evento_eliminado', (_) {
+      if (mounted) _loadEventos();
+    });
+
     _loadEventos();
   }
 
@@ -24,6 +42,16 @@ class _AgendaPageState extends State<AgendaPage> {
     setState(() {
       _eventosFuture = _api.listar();
     });
+  }
+
+  @override
+  void dispose() {
+    if (_socketService.isReady) {
+      _socketService.socket.off('evento_creado');
+      _socketService.socket.off('evento_actualizado');
+      _socketService.socket.off('evento_eliminado');
+    }
+    super.dispose();
   }
 
   @override

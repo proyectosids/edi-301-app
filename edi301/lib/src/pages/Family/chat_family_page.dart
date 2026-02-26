@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edi301/services/mensajes_api.dart';
+import 'package:edi301/services/socket_service.dart';
 import 'package:edi301/core/api_client_http.dart';
 
 class ChatFamilyPage extends StatefulWidget {
@@ -26,22 +27,28 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
 
   List<dynamic> _mensajes = [];
   int _miIdUsuario = 0;
-  Timer? _timer;
+  final SocketService _socketService = SocketService();
 
   @override
   void initState() {
     super.initState();
+    _socketService.initSocket();
+
     _loadUser();
     _cargarMensajes();
-    _timer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => _cargarMensajes(quiet: true),
-    );
+
+    // ✅ Tiempo real (chat familiar)
+    _socketService.joinFamilyRoom(widget.idFamilia);
+    _socketService.socket.off('nuevo_mensaje_familia');
+    _socketService.socket.on('nuevo_mensaje_familia', (data) {
+      if (mounted) _cargarMensajes();
+    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _socketService.socket.off('nuevo_mensaje_familia');
+    _socketService.leaveRoom('familia_${widget.idFamilia}');
     _textController.dispose();
     super.dispose();
   }
