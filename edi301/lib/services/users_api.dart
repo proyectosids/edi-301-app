@@ -22,12 +22,18 @@ class UsersApi {
     return [];
   }
 
-  Future<bool> updateFcmToken(int idUsuario, String token) async {
+  Future<bool> updateFcmToken(int idUsuario, String fcmToken) async {
     try {
       final response = await _http.putJson(
         '/api/usuarios/update-token',
-        data: {'id_usuario': idUsuario, 'session_token': token},
+        data: {'id_usuario': idUsuario, 'fcm_token': fcmToken},
       );
+
+      if (response.statusCode != 200) {
+        print(
+          "❌ Error del servidor: ${response.statusCode} - ${response.body}",
+        );
+      }
       return response.statusCode == 200;
     } catch (e) {
       print("Error actualizando FCM Token: $e");

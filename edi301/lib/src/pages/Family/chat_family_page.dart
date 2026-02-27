@@ -1,9 +1,8 @@
-import 'dart:async';
+import 'dart:async'; // ✅ Necesario para el Timer
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edi301/services/mensajes_api.dart';
-import 'package:edi301/services/socket_service.dart';
 import 'package:edi301/core/api_client_http.dart';
 
 class ChatFamilyPage extends StatefulWidget {
@@ -27,29 +26,37 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
 
   List<dynamic> _mensajes = [];
   int _miIdUsuario = 0;
-  final SocketService _socketService = SocketService();
+  bool _loading = true; // ✅ Control de carga inicial
+
+  Timer? _pollingTimer; // ✅ Referencia para el temporizador
 
   @override
   void initState() {
     super.initState();
-    _socketService.initSocket();
+    _init();
+  }
 
-    _loadUser();
-    _cargarMensajes();
+  Future<void> _init() async {
+    await _loadUser();
+    await _cargarMensajes(); // Carga inicial de mensajes
+    _startPolling(); // ✅ Inicia el refresco automático
+  }
 
-    // ✅ Tiempo real (chat familiar)
-    _socketService.joinFamilyRoom(widget.idFamilia);
-    _socketService.socket.off('nuevo_mensaje_familia');
-    _socketService.socket.on('nuevo_mensaje_familia', (data) {
-      if (mounted) _cargarMensajes();
+  // ✅ Configura el temporizador para consultar mensajes cada 3 segundos
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        _cargarMensajes(quiet: true); // Carga silenciosa en segundo plano
+      }
     });
   }
 
   @override
   void dispose() {
-    _socketService.socket.off('nuevo_mensaje_familia');
-    _socketService.leaveRoom('familia_${widget.idFamilia}');
+    _pollingTimer?.cancel(); // ✅ Obligatorio: detener el timer al salir
     _textController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -58,30 +65,46 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
     final userStr = prefs.getString('user');
     if (userStr != null) {
       final user = jsonDecode(userStr);
-      setState(() {
-        _miIdUsuario = user['id_usuario'] ?? user['id'] ?? 0;
-      });
+      if (mounted) {
+        setState(() {
+          _miIdUsuario = user['id_usuario'] ?? user['id'] ?? 0;
+        });
+      }
     }
   }
 
+  // ✅ Ajustado para manejar refrescos sin interrumpir la UI
   Future<void> _cargarMensajes({bool quiet = false}) async {
+    if (!quiet && _mensajes.isEmpty) {
+      setState(() => _loading = true);
+    }
+
     final nuevos = await _api.getMensajesFamilia(widget.idFamilia);
+
     if (mounted) {
-      setState(() {
-        _mensajes = nuevos;
-      });
-      if (!quiet) _scrollToBottom();
+      // Solo actualizamos la UI y el scroll si la cantidad de mensajes cambió
+      if (nuevos.length != _mensajes.length) {
+        setState(() {
+          _mensajes = nuevos;
+          _loading = false;
+        });
+        _scrollToBottom();
+      } else {
+        if (_loading) setState(() => _loading = false);
+      }
     }
   }
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       });
     }
   }
@@ -91,9 +114,15 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
     if (texto.isEmpty) return;
 
     _textController.clear();
+
+    // ✅ Optimismo: Refrescamos inmediatamente después de enviar con éxito
     final exito = await _api.enviarMensaje(widget.idFamilia, texto);
     if (exito) {
-      _cargarMensajes();
+      _cargarMensajes(quiet: true);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error al enviar mensaje")));
     }
   }
 
@@ -121,20 +150,27 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
         backgroundColor: const Color.fromRGBO(19, 67, 107, 1),
         elevation: 0,
       ),
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-              itemCount: _mensajes.length,
-              itemBuilder: (context, index) {
-                final msg = _mensajes[index];
-                final esMio = msg['id_usuario'] == _miIdUsuario;
-                return _buildMessageBubble(msg, esMio);
-              },
-            ),
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  ) // ✅ Loader inicial
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 20,
+                    ),
+                    itemCount: _mensajes.length,
+                    itemBuilder: (context, index) {
+                      final msg = _mensajes[index];
+                      final esMio = msg['id_usuario'] == _miIdUsuario;
+                      return _buildMessageBubble(msg, esMio);
+                    },
+                  ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

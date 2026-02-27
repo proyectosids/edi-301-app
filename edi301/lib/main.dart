@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+
 import 'package:edi301/Login/forgot_password/forgot_password_page.dart';
 import 'package:edi301/src/pages/Admin/add_tutor/add_tutor_page.dart';
 import 'package:edi301/src/pages/Admin/birthdays/birthday_page.dart';
@@ -26,13 +28,74 @@ import 'package:edi301/src/pages/Admin/studient_detail/studient_detail_page.dart
 import 'package:edi301/src/pages/Admin/agenda/agenda_page.dart';
 import 'package:edi301/src/pages/Admin/agenda/crear_evento_page.dart';
 import 'package:edi301/src/pages/Admin/reportes/reportes_page.dart';
-
 import 'package:edi301/services/socket_service.dart';
+import 'package:edi301/services/users_api.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print("Notificación en Background recibida: ${message.messageId}");
+}
+
+/// Sincroniza token al backend si hay usuario logueado.
+/// Guarda el último token enviado para evitar spam de requests.
+Future<void> _syncFcmIfLoggedIn() async {
+  final prefs = await SharedPreferences.getInstance();
+  final userJson = prefs.getString('user');
+  if (userJson == null || userJson.isEmpty) return;
+
+  final user = jsonDecode(userJson) as Map<String, dynamic>;
+  final idUsuario = user['id_usuario'] ?? user['IdUsuario'];
+  if (idUsuario == null) return;
+
+  final fcmToken = await FirebaseMessaging.instance.getToken();
+  if (fcmToken == null || fcmToken.isEmpty) return;
+
+  final lastSent = prefs.getString('last_fcm_token_sent');
+  if (lastSent == fcmToken) {
+    // ya está sincronizado
+    return;
+  }
+
+  final ok = await UsersApi().updateFcmToken(
+    int.parse(idUsuario.toString()),
+    fcmToken,
+  );
+  if (ok) {
+    await prefs.setString('last_fcm_token_sent', fcmToken);
+    print("✅ FCM token sincronizado en arranque");
+  } else {
+    print("❌ No se pudo sincronizar FCM token en arranque");
+  }
+}
+
+/// Escucha refresh de token y lo manda al backend.
+Future<void> _listenFcmRefresh() async {
+  final prefs = await SharedPreferences.getInstance();
+  final userJson = prefs.getString('user');
+  if (userJson == null || userJson.isEmpty) return;
+
+  final user = jsonDecode(userJson) as Map<String, dynamic>;
+  final idUsuario = user['id_usuario'] ?? user['IdUsuario'];
+  if (idUsuario == null) return;
+
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+    if (newToken.isEmpty) return;
+
+    final lastSent = prefs.getString('last_fcm_token_sent');
+    if (lastSent == newToken) return;
+
+    final ok = await UsersApi().updateFcmToken(
+      int.parse(idUsuario.toString()),
+      newToken,
+    );
+    if (ok) {
+      await prefs.setString('last_fcm_token_sent', newToken);
+      print("✅ FCM token actualizado por refresh");
+    } else {
+      print("❌ Falló update FCM token por refresh");
+    }
+  });
 }
 
 void main() async {
@@ -47,11 +110,11 @@ void main() async {
   await notiService.init();
   await notiService.requestPermissions();
 
+  // Foreground
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     print('Mensaje recibido en foreground: ${message.notification?.title}');
 
-    RemoteNotification? notification = message.notification;
-
+    final notification = message.notification;
     if (notification != null) {
       notiService.showNotification(
         id: notification.hashCode,
@@ -62,17 +125,20 @@ void main() async {
     }
   });
 
+  // ✅ Importante: sincronizar token si ya está logueado (entra directo a home)
+  await _syncFcmIfLoggedIn();
+  await _listenFcmRefresh();
+
   final prefs = await SharedPreferences.getInstance();
+  final userJson = prefs.getString('user');
 
-  final String? userJson = prefs.getString('user');
-
-  final String rutaInicial = (userJson != null && userJson.isNotEmpty)
+  final String initialRoute = (userJson != null && userJson.isNotEmpty)
       ? 'home'
       : 'login';
 
   HttpOverrides.global = MyHttpOverrides();
 
-  runApp(MyApp(initialRoute: rutaInicial));
+  runApp(MyApp(initialRoute: initialRoute));
 }
 
 class MyHttpOverrides extends HttpOverrides {

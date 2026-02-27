@@ -58,40 +58,53 @@ class LoginController {
 
       await _tokenStorage.save(token);
 
-      try {
-        final idUsuario = data['id_usuario'] ?? data['IdUsuario'];
-
-        if (idUsuario != null) {
+      // Cargar datos extra (familia) si aplica
+      final idUsuario = data['id_usuario'] ?? data['IdUsuario'];
+      if (idUsuario != null) {
+        try {
           final familiaRes = await _http.getJson('/api/usuarios/$idUsuario');
           if (familiaRes.statusCode == 200) {
             final usuarioCompleto =
                 jsonDecode(familiaRes.body) as Map<String, dynamic>;
-
             final idFamilia =
                 usuarioCompleto['id_familia'] ?? usuarioCompleto['FamiliaID'];
             if (idFamilia != null) {
               data['id_familia'] = idFamilia;
             }
           }
-
-          try {
-            String? fcmToken = await FirebaseMessaging.instance.getToken();
-            if (fcmToken != null) {
-              print("FCM Token obtenido: $fcmToken");
-              int idInt = int.parse(idUsuario.toString());
-              await _usersApi.updateFcmToken(idInt, fcmToken);
-            }
-          } catch (e) {
-            print("No se pudo registrar el token FCM: $e");
-          }
+        } catch (e) {
+          print('Error consultando usuario completo: $e');
         }
-      } catch (e) {
-        print('Error en carga de datos adicionales: $e');
       }
 
+      // Guardar sesión local
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('session_token', token);
       await prefs.setString('user', jsonEncode(data));
+
+      // ✅ Registrar token FCM (una sola vez)
+      if (idUsuario != null) {
+        try {
+          final fcmToken = await FirebaseMessaging.instance.getToken();
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            final lastSent = prefs.getString('last_fcm_token_sent');
+            if (lastSent != fcmToken) {
+              print("🔥 Registrando FCM Token: $fcmToken");
+              final ok = await _usersApi.updateFcmToken(
+                int.parse(idUsuario.toString()),
+                fcmToken,
+              );
+              print("✅ ¿Registro exitoso en servidor?: $ok");
+              if (ok) {
+                await prefs.setString('last_fcm_token_sent', fcmToken);
+              }
+            }
+          }
+        } catch (e) {
+          print("No se pudo registrar el token FCM: $e");
+        }
+      }
+
       final rol = (data['rol'] ?? data['role'] ?? '').toString();
       final tipoUsuario = (data['TipoUsuario'] ?? data['tipoUsuario'] ?? '')
           .toString();
