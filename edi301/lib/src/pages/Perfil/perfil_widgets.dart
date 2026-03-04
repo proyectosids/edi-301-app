@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:edi301/tools/fullscreen_image_viewer.dart';
 
 class HeaderCard extends StatelessWidget {
   const HeaderCard({
@@ -30,6 +31,8 @@ class HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageProvider = _getImageProvider();
+    final heroTag = 'user_avatar_${avatarUrl.hashCode}';
     return Card(
       elevation: 2,
       clipBehavior: Clip.antiAlias,
@@ -44,21 +47,40 @@ class HeaderCard extends StatelessWidget {
               children: [
                 Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 44,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: _getImageProvider(),
-                        onBackgroundImageError: (_, __) {},
-                        child: (avatarUrl.isEmpty || avatarUrl.contains('null'))
-                            ? const Icon(
-                                Icons.person,
-                                size: 40,
-                                color: Colors.grey,
-                              )
-                            : null,
+                    GestureDetector(
+                      onTap: () {
+                        // Solo abre si hay imagen válida (no default / null)
+                        if (avatarUrl.isNotEmpty &&
+                            !avatarUrl.contains('null') &&
+                            avatarUrl != '—') {
+                          FullScreenImageViewer.open(
+                            context,
+                            imageProvider: imageProvider,
+                            heroTag: heroTag,
+                          );
+                        }
+                      },
+                      child: Hero(
+                        tag: heroTag,
+                        child: CircleAvatar(
+                          radius: 44,
+                          backgroundColor: Colors.white,
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Colors.grey[200],
+                            backgroundImage: imageProvider,
+                            onBackgroundImageError: (_, __) {},
+                            child:
+                                (avatarUrl.isEmpty ||
+                                    avatarUrl.contains('null'))
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 40,
+                                    color: Colors.grey,
+                                  )
+                                : null,
+                          ),
+                        ),
                       ),
                     ),
                     Positioned(
@@ -132,9 +154,14 @@ class HeaderCard extends StatelessWidget {
                               ),
                             if (family.isNotEmpty && family != '—')
                               Chip(
-                                label: Text('Familia: $family'),
+                                label: Text('$family'),
                                 visualDensity: VisualDensity.compact,
-                                backgroundColor: Colors.white,
+                                backgroundColor: const Color.fromARGB(
+                                  255,
+                                  174,
+                                  174,
+                                  174,
+                                ),
                               ),
                           ],
                         ),

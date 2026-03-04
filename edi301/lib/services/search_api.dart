@@ -10,6 +10,7 @@ class UserMini {
   final int? matricula;
   final int? numEmpleado;
   final String? email;
+  final String? fotoPerfil;
 
   UserMini({
     required this.id,
@@ -19,6 +20,7 @@ class UserMini {
     this.matricula,
     this.numEmpleado,
     this.email,
+    this.fotoPerfil,
   });
 
   factory UserMini.fromJson(Map<String, dynamic> j) => UserMini(
@@ -29,6 +31,8 @@ class UserMini {
     matricula: _toIntOrNull(j['Matricula'] ?? j['matricula']),
     numEmpleado: _toIntOrNull(j['NumEmpleado'] ?? j['num_empleado']),
     email: (j['E_mail'] ?? j['correo'])?.toString(),
+    fotoPerfil: (j['FotoPerfil'] ?? j['foto_perfil'] ?? j['fotoPerfil'])
+        ?.toString(),
   );
 }
 

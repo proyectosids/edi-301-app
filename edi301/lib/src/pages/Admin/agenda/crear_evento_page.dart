@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:edi301/core/api_client_http.dart';
-import 'agenda_controller.dart'; // Importa tu controlador
+import 'agenda_controller.dart';
+import 'package:edi301/tools/media_picker.dart';
 
 class CreateEventPage extends StatefulWidget {
   final Map<String, dynamic>? eventoExistente;
@@ -31,11 +32,9 @@ class _CreateEventPageState extends State<CreateEventPage> {
   }
 
   Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await MediaPicker.pickImage(context);
     if (image != null) {
-      setState(() {
-        _controller.imagenSeleccionada = File(image.path);
-      });
+      setState(() => _controller.imagenSeleccionada = File(image.path));
     }
   }
 

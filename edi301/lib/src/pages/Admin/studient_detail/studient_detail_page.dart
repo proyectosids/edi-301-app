@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:edi301/core/api_client_http.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:edi301/tools/fullscreen_image_viewer.dart';
 
 class StudentDetailPage extends StatefulWidget {
   const StudentDetailPage({super.key});
@@ -59,6 +60,31 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
         });
       }
     }
+  }
+
+  String _absUrl(String raw) {
+    if (raw.isEmpty || raw == 'null') return '';
+    var s = raw.trim();
+
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+
+    s = s.replaceAll('\\', '/');
+
+    final idxPublic = s.indexOf('public/uploads/');
+    if (idxPublic != -1) {
+      s = s.substring(idxPublic + 'public'.length); // deja "/uploads/.."
+    }
+
+    final idxUploads = s.indexOf('/uploads/');
+    if (idxUploads != -1) {
+      s = s.substring(idxUploads);
+    } else if (s.startsWith('uploads/')) {
+      s = '/$s';
+    } else if (!s.startsWith('/')) {
+      s = '/$s';
+    }
+
+    return '${ApiHttp.baseUrl}$s';
   }
 
   String _formatFecha(String? fechaRaw) {
@@ -129,6 +155,15 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
     final residence = s('residencia', 'Externa');
     final bool isInternal = residence.toLowerCase().startsWith('intern');
     final bool showAddress = !isInternal && rawAddr != '—';
+    final fotoRaw = s('foto_perfil', '');
+    final fotoAbs = _absUrl(fotoRaw);
+    final ImageProvider avatarProvider = fotoAbs.isNotEmpty
+        ? NetworkImage(fotoAbs)
+        : const AssetImage('assets/img/7141724.png');
+
+    final bool hasPhoto = fotoAbs.isNotEmpty;
+
+    final heroTag = 'student_avatar_${_studentId}_${fotoAbs.hashCode}';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -143,13 +178,26 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: primary.withOpacity(.1),
-                    child: const Icon(
-                      Icons.person,
-                      size: 28,
-                      color: Colors.black54,
+                  GestureDetector(
+                    onTap: hasPhoto
+                        ? () {
+                            FullScreenImageViewer.open(
+                              context,
+                              imageProvider: avatarProvider,
+                              heroTag: heroTag,
+                            );
+                          }
+                        : null,
+                    child: Hero(
+                      tag: heroTag,
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundColor: primary.withOpacity(.12),
+                        backgroundImage: avatarProvider,
+                        child: hasPhoto
+                            ? null
+                            : const Icon(Icons.person, size: 28),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -185,7 +233,7 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
                             ),
                             if (familyName != '—')
                               Chip(
-                                label: Text('Familia: $familyName'),
+                                label: Text(' $familyName'),
                                 visualDensity: VisualDensity.compact,
                               ),
                           ],

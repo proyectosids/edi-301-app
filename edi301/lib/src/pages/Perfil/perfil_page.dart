@@ -9,6 +9,7 @@ import 'package:edi301/auth/token_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:edi301/tools/media_picker.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
@@ -74,8 +75,7 @@ class _PerfilPageState extends State<PerfilPage> {
       return;
     }
 
-    final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await MediaPicker.pickImage(context);
     if (image == null) return;
 
     setState(() => _loading = true);

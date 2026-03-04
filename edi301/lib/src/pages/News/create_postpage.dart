@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/publicaciones_api.dart';
+import 'package:edi301/tools/media_picker.dart';
 
 class CreatePostPage extends StatefulWidget {
   final int idUsuario;
@@ -57,11 +58,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Future<void> _seleccionarImagen() async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? photo = await MediaPicker.pickImage(context);
     if (photo != null) {
-      setState(() {
-        _imagenSeleccionada = File(photo.path);
-      });
+      setState(() => _imagenSeleccionada = File(photo.path));
     }
   }
 

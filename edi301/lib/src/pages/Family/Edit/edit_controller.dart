@@ -5,6 +5,7 @@ import 'package:edi301/models/family_model.dart';
 import 'package:edi301/services/familia_api.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:edi301/tools/media_picker.dart';
 
 class EditController {
   BuildContext? context;
@@ -76,12 +77,9 @@ class EditController {
 
   Future<void> selectProfileImage() async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-      );
-      if (pickedFile != null) {
-        profileImage.value = pickedFile;
-      }
+      if (context == null) return;
+      final XFile? pickedFile = await MediaPicker.pickImage(context!);
+      if (pickedFile != null) profileImage.value = pickedFile;
     } catch (e) {
       if (context != null) {
         ScaffoldMessenger.of(context!).showSnackBar(
@@ -93,12 +91,9 @@ class EditController {
 
   Future<void> selectCoverImage() async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-      );
-      if (pickedFile != null) {
-        coverImage.value = pickedFile;
-      }
+      if (context == null) return;
+      final XFile? pickedFile = await MediaPicker.pickImage(context!);
+      if (pickedFile != null) coverImage.value = pickedFile;
     } catch (e) {
       if (context != null) {
         ScaffoldMessenger.of(context!).showSnackBar(

@@ -1,3 +1,4 @@
+import 'package:edi301/core/api_client_http.dart';
 import 'package:edi301/src/widgets/responsive_content.dart';
 import 'package:flutter/material.dart';
 import 'package:edi301/services/search_api.dart';
@@ -23,6 +24,31 @@ class _SearchPageState extends State<SearchPage> {
 
   final _api = SearchApi();
   final ChatApi _chatApi = ChatApi();
+
+  String _absUrl(String raw) {
+    if (raw.isEmpty || raw == 'null') return '';
+    var s = raw.trim();
+
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+
+    s = s.replaceAll('\\', '/');
+
+    final idxPublic = s.indexOf('public/uploads/');
+    if (idxPublic != -1) {
+      s = s.substring(idxPublic + 'public'.length);
+    }
+
+    final idxUploads = s.indexOf('/uploads/');
+    if (idxUploads != -1) {
+      s = s.substring(idxUploads);
+    } else if (s.startsWith('uploads/')) {
+      s = '/$s';
+    } else if (!s.startsWith('/')) {
+      s = '/$s';
+    }
+
+    return '${ApiHttp.baseUrl}$s';
+  }
 
   @override
   void dispose() {
@@ -239,9 +265,13 @@ class _SearchPageState extends State<SearchPage> {
     final doc = (tipo == 'EMPLEADO' && u.numEmpleado != null)
         ? 'No. empleado: ${u.numEmpleado}'
         : (u.matricula != null ? 'Matrícula: ${u.matricula}' : '');
+    final fotoAbs = _absUrl(u.fotoPerfil ?? '');
 
     return ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.person)),
+      leading: CircleAvatar(
+        backgroundImage: fotoAbs.isNotEmpty ? NetworkImage(fotoAbs) : null,
+        child: fotoAbs.isNotEmpty ? null : const Icon(Icons.person),
+      ),
       title: Text(fullName.isEmpty ? '—' : fullName),
       subtitle: Text([tipo, doc].where((e) => e.isNotEmpty).join(' · ')),
       trailing: Row(

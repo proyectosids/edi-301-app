@@ -64,8 +64,8 @@ class _NewsPageState extends State<NewsPage> {
   void _setupRealtime() {
     _socketService.initSocket();
 
-    if (_userId != null) {
-      _socketService.joinUserRoom(_userId!);
+    if (_userId > 0) {
+      _socketService.joinUserRoom(_userId);
     }
     _socketService.joinInstitucionalRoom();
 
@@ -238,38 +238,90 @@ class _NewsPageState extends State<NewsPage> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadFeed,
-              child: _posts.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: _posts.length,
-                      itemBuilder: (context, index) {
-                        final item = _posts[index];
-                        if (item['tipo'] == 'EVENTO') {
-                          return _buildEventCard(item);
-                        }
-                        return _buildPostCard(item, index);
-                      },
-                    ),
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80),
+                itemCount:
+                    (_posts.isEmpty ? 1 : _posts.length) +
+                    ((_isAlumnoRole && !_hasFamiliaAsignada) ? 1 : 0),
+                itemBuilder: (context, index) {
+                  // Banner
+                  if ((_isAlumnoRole && !_hasFamiliaAsignada) && index == 0) {
+                    return Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "Para crear publicaciones necesitas tener una familia asignada.",
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Ajuste índice real
+                  final offset = ((_isAlumnoRole && !_hasFamiliaAsignada)
+                      ? 1
+                      : 0);
+                  final realIndex = index - offset;
+
+                  // Empty state
+                  if (_posts.isEmpty) return _buildEmptyState();
+
+                  final item = _posts[realIndex];
+                  if (item['tipo'] == 'EVENTO') return _buildEventCard(item);
+                  return _buildPostCard(item, realIndex);
+                },
+              ),
             ),
       floatingActionButton: _shouldShowFab()
           ? FloatingActionButton(
-              backgroundColor: const Color.fromRGBO(245, 188, 6, 1),
+              backgroundColor: _canCreatePost
+                  ? const Color.fromRGBO(245, 188, 6, 1)
+                  : Colors.grey,
               child: const Icon(Icons.add, color: Colors.black),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CreatePostPage(
-                      idUsuario: _userId,
-                      idFamilia: _familiaId,
-                    ),
-                  ),
-                ).then((_) => _loadFeed());
-              },
+              onPressed: !_canCreatePost
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CreatePostPage(
+                            idUsuario: _userId,
+                            idFamilia: _familiaId,
+                          ),
+                        ),
+                      ).then((_) => _loadFeed());
+                    },
             )
           : null,
     );
+  }
+
+  bool get _isAlumnoRole {
+    final r = _userRole.trim().toUpperCase();
+    return ['ALUMNO', 'HIJOEDI', 'HIJO', 'ESTUDIANTE'].contains(r);
+  }
+
+  bool get _hasFamiliaAsignada {
+    return _familiaId != null && _familiaId! > 0;
+  }
+
+  bool get _canCreatePost {
+    // ✅ Solo restringe a alumnos sin familia
+    if (_isAlumnoRole && !_hasFamiliaAsignada) return false;
+    return true;
   }
 
   void _deleteEvent(int idEvento) async {
@@ -408,23 +460,21 @@ class _NewsPageState extends State<NewsPage> {
   }
 
   Widget _buildEmptyState() {
-    return ListView(
-      children: [
-        SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-        const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.newspaper, size: 80, color: Colors.grey),
-              SizedBox(height: 20),
-              Text(
-                "Aún no hay noticias.",
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
-            ],
-          ),
+    return Padding(
+      padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.25),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.newspaper, size: 80, color: Colors.grey),
+            SizedBox(height: 20),
+            Text(
+              "Aún no hay noticias.",
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

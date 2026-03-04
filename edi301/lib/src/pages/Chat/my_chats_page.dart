@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:edi301/services/chat_api.dart';
 import 'package:edi301/src/pages/Chat/chat_page.dart';
-import 'package:intl/intl.dart';
+import 'package:edi301/core/api_client_http.dart';
 
 class MyChatsPage extends StatefulWidget {
   const MyChatsPage({super.key});
@@ -34,6 +34,30 @@ class _MyChatsPageState extends State<MyChatsPage> {
     } catch (e) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  String _absUrl(String raw) {
+    if (raw.isEmpty || raw == 'null') return '';
+    var s = raw.trim();
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+
+    s = s.replaceAll('\\', '/');
+
+    final idxPublic = s.indexOf('public/uploads/');
+    if (idxPublic != -1) {
+      s = s.substring(idxPublic + 'public'.length);
+    }
+
+    final idxUploads = s.indexOf('/uploads/');
+    if (idxUploads != -1) {
+      s = s.substring(idxUploads);
+    } else if (s.startsWith('uploads/')) {
+      s = '/$s';
+    } else if (!s.startsWith('/')) {
+      s = '/$s';
+    }
+
+    return '${ApiHttp.baseUrl}$s';
   }
 
   String _formatDate(String? fechaIso) {
@@ -96,16 +120,23 @@ class _MyChatsPageState extends State<MyChatsPage> {
               itemBuilder: (ctx, i) {
                 final chat = _chats[i];
                 final tipo = chat['tipo'];
+                final fotoRaw = (chat['foto_perfil_chat'] ?? '').toString();
+                final fotoAbs = _absUrl(fotoRaw);
 
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: tipo == 'GRUPAL'
                         ? Colors.orange
                         : const Color.fromRGBO(19, 67, 107, 1),
-                    child: Icon(
-                      tipo == 'GRUPAL' ? Icons.groups : Icons.person,
-                      color: Colors.white,
-                    ),
+                    backgroundImage: (tipo != 'GRUPAL' && fotoAbs.isNotEmpty)
+                        ? NetworkImage(fotoAbs)
+                        : null,
+                    child: (tipo != 'GRUPAL' && fotoAbs.isNotEmpty)
+                        ? null
+                        : Icon(
+                            tipo == 'GRUPAL' ? Icons.groups : Icons.person,
+                            color: Colors.white,
+                          ),
                   ),
                   title: Text(
                     chat['titulo_chat'] ?? 'Desconocido',

@@ -67,6 +67,10 @@ class Family {
   final int? motherEmployeeId;
   final String? papaNumEmpleado;
   final String? mamaNumEmpleado;
+  final String? papaTelefono;
+  final String? mamaTelefono;
+  final String? papaFotoPerfilUrl;
+  final String? mamaFotoPerfilUrl;
   String get residence => residencia ?? '';
   const Family({
     required this.id,
@@ -84,6 +88,10 @@ class Family {
     this.motherEmployeeId,
     this.papaNumEmpleado,
     this.mamaNumEmpleado,
+    this.papaTelefono,
+    this.mamaTelefono,
+    this.papaFotoPerfilUrl,
+    this.mamaFotoPerfilUrl,
   });
 
   factory Family.fromJson(Map<String, dynamic> j) {
@@ -153,6 +161,10 @@ class Family {
               as int?,
       papaNumEmpleado: j['papa_num_empleado']?.toString(),
       mamaNumEmpleado: j['mama_num_empleado']?.toString(),
+      papaTelefono: j['papa_telefono']?.toString(),
+      mamaTelefono: j['mama_telefono']?.toString(),
+      papaFotoPerfilUrl: j['papa_foto_perfil_url']?.toString(),
+      mamaFotoPerfilUrl: j['mama_foto_perfil_url']?.toString(),
     );
   }
 
