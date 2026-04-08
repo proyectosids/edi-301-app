@@ -338,8 +338,9 @@ class _ImagenFelicitacionPageState extends State<_ImagenFelicitacionPage> {
     setState(() => _uploading = true);
     try {
       // Upload image to backend
+      // Un solo request: sube imagen y actualiza config
       final streamedResponse = await _http.multipart(
-        '/api/fotos/cumpleanos',
+        '/api/usuarios/cumpleanos/imagen',
         method: 'POST',
         files: [await http.MultipartFile.fromPath('imagen', picked.path)],
       );
@@ -347,28 +348,18 @@ class _ImagenFelicitacionPageState extends State<_ImagenFelicitacionPage> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        final nuevaUrl =
-            data['url'] ?? data['imagen_url'] ?? data['path'] ?? '';
-
-        // Update birthday config
-        final upd = await _http.putJson(
-          '/api/usuarios/cumpleanos/imagen',
-          data: {'imagen_url': nuevaUrl},
-        );
-
-        if (upd.statusCode == 200) {
-          setState(() => _imagenActual = nuevaUrl);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('✅ Imagen actualizada correctamente'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
+        final nuevaUrl = (data['url'] ?? data['imagen'] ?? '').toString();
+        if (nuevaUrl.isNotEmpty) setState(() => _imagenActual = nuevaUrl);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Imagen actualizada correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       } else {
-        throw Exception('Error ${response.statusCode}');
+        throw Exception('Error: ${response.statusCode}');
       }
     } catch (e) {
       if (mounted) {
