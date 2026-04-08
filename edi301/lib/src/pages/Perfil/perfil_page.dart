@@ -13,12 +13,14 @@ import 'package:edi301/tools/media_picker.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
-
   @override
   State<PerfilPage> createState() => _PerfilPageState();
 }
 
 class _PerfilPageState extends State<PerfilPage> {
+  static const _primary = Color.fromRGBO(19, 67, 107, 1);
+  static const _gold = Color.fromRGBO(245, 188, 6, 1);
+
   bool _isAlumno = false;
   int? _userId;
 
@@ -43,13 +45,7 @@ class _PerfilPageState extends State<PerfilPage> {
     'grade': '—',
   };
 
-  bool notif = true;
-  bool darkMode = false;
-  bool bgRefresh = true;
-  bool birthdayReminder = true;
-
   bool _loading = true;
-  final primary = const Color.fromRGBO(19, 67, 107, 1);
 
   @override
   void initState() {
@@ -57,250 +53,12 @@ class _PerfilPageState extends State<PerfilPage> {
     _loadProfile();
   }
 
-  String _formatFecha(String? fechaRaw) {
-    if (fechaRaw == null || fechaRaw.isEmpty || fechaRaw == '—') return '—';
+  String _formatFecha(String? raw) {
+    if (raw == null || raw.isEmpty || raw == '—') return '—';
     try {
-      DateTime fecha = DateTime.parse(fechaRaw);
-      return DateFormat('dd/MM/yyyy').format(fecha);
-    } catch (e) {
-      return fechaRaw.split('T')[0];
-    }
-  }
-
-  Future<void> _pickAndUploadProfile() async {
-    if (_userId == null || _userId == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("No se pudo identificar el usuario (id inválido)"),
-        ),
-      );
-      return;
-    }
-
-    final XFile? image = await MediaPicker.pickImage(context);
-    if (image == null) return;
-
-    setState(() => _loading = true);
-
-    try {
-      Map<String, String> currentData = {
-        'nombre': data['name'].toString().split(' ')[0],
-      };
-
-      final stream = await _http.multipart(
-        '/api/usuarios/$_userId',
-        method: 'PUT',
-        files: [await http.MultipartFile.fromPath('foto', image.path)],
-        fields: currentData,
-      );
-
-      if (stream.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Foto actualizada con éxito")),
-        );
-        await _fetchFromServer();
-      } else {
-        final body = await stream.stream.bytesToString();
-        // ignore: avoid_print
-        print("Error subida: ${stream.statusCode} body=$body");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error al subir la imagen")),
-        );
-      }
-    } catch (e) {
-      // ignore: avoid_print
-      print("Error upload: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _hydrateFromLocal() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('user');
-      if (raw == null) return;
-
-      final u = jsonDecode(raw) as Map<String, dynamic>;
-      String tipo = (u['tipo_usuario'] ?? u['TipoUsuario'] ?? '').toString();
-
-      int id = 0;
-      if (u['id_usuario'] != null) {
-        id = int.tryParse(u['id_usuario'].toString()) ?? 0;
-      } else if (u['IdUsuario'] != null) {
-        id = int.tryParse(u['IdUsuario'].toString()) ?? 0;
-      } else if (u['id'] != null) {
-        id = int.tryParse(u['id'].toString()) ?? 0;
-      }
-
-      String nombre = (u['nombre'] ?? u['Nombre'] ?? '').toString();
-      String apellido = (u['apellido'] ?? u['Apellido'] ?? '').toString();
-
-      String avatar = (u['foto_perfil'] ?? u['FotoPerfil'] ?? '').toString();
-      if (avatar.isNotEmpty && !avatar.startsWith('http')) {
-        avatar = '${ApiHttp.baseUrl}$avatar';
-      }
-
-      final isAlumno = tipo.toUpperCase() == 'ALUMNO';
-      final matricula = (u['matricula'] ?? u['Matricula'])?.toString();
-      final numEmpleado =
-          (u['num_empleado'] ?? u['numEmpleado'] ?? u['NumEmpleado'])
-              ?.toString();
-
-      setState(() {
-        _isAlumno = isAlumno;
-        _userId = id;
-
-        data = {
-          ...data,
-          'name': (('$nombre $apellido').trim().isEmpty)
-              ? '—'
-              : ('$nombre $apellido').trim(),
-          'email': (u['correo'] ?? u['E_mail'] ?? '—').toString(),
-          'matricula': matricula ?? '—',
-          'numEmpleado': numEmpleado ?? '—',
-          'docLabel': isAlumno ? 'Matrícula' : 'No. Empleado',
-          'docValue': isAlumno ? (matricula ?? '—') : (numEmpleado ?? '—'),
-          'phone': (u['telefono'] ?? u['Telefono'] ?? '—').toString(),
-          'residence': (u['residencia'] ?? u['Residencia'] ?? '—').toString(),
-          'address': (u['direccion'] ?? u['Direccion'] ?? '—').toString(),
-          'birthday': _formatFecha(
-            u['fecha_nacimiento'] ?? u['Fecha_Nacimiento'],
-          ),
-          'avatarUrl': avatar.isNotEmpty
-              ? avatar
-              : data['avatarUrl'].toString(),
-          'status': (u['estado'] ?? u['Estado'] ?? 'Activo').toString(),
-          'grade': (u['carrera'] ?? '—').toString(),
-          'family': (u['nombre_familia'] ?? '—').toString(),
-        };
-      });
-    } catch (e) {
-      print("Error cargando perfil local: $e");
-    }
-  }
-
-  Future<void> _fetchFromServer() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('user');
-      if (raw == null) return;
-
-      final uLocal = jsonDecode(raw) as Map<String, dynamic>;
-      final id = uLocal['IdUsuario'] ?? uLocal['id_usuario'] ?? _userId;
-      if (id == null) return;
-
-      final res = await _http.getJson('/api/usuarios/$id');
-      if (res.statusCode >= 400) return;
-
-      final x = jsonDecode(res.body) as Map<String, dynamic>;
-
-      String nombre = (x['nombre'] ?? x['Nombre'] ?? uLocal['nombre'] ?? '')
-          .toString();
-      String apellido =
-          (x['apellido'] ?? x['Apellido'] ?? uLocal['apellido'] ?? '')
-              .toString();
-      String colorHex = (x['color_estado'] ?? '#13436B').toString();
-
-      String avatar = (x['foto_perfil'] ?? x['FotoPerfil'] ?? '').toString();
-      if (avatar.isNotEmpty && !avatar.startsWith('http')) {
-        avatar = '${ApiHttp.baseUrl}$avatar';
-      }
-
-      final tipo = (x['tipo_usuario'] ?? x['TipoUsuario'] ?? '')
-          .toString()
-          .toUpperCase();
-      final isAlumno = tipo == 'ALUMNO';
-
-      final matricula = (x['matricula'] ?? x['Matricula'] ?? data['matricula'])
-          ?.toString();
-      final numEmpleado =
-          (x['num_empleado'] ??
-                  x['numEmpleado'] ??
-                  x['NumEmpleado'] ??
-                  data['numEmpleado'])
-              ?.toString();
-
-      setState(() {
-        _isAlumno = isAlumno;
-
-        data = {
-          ...data,
-          'name': (('$nombre $apellido').trim().isNotEmpty)
-              ? ('$nombre $apellido').trim()
-              : data['name'],
-          'email': (x['correo'] ?? x['E_mail'] ?? data['email']).toString(),
-          'matricula': matricula ?? '—',
-          'numEmpleado': numEmpleado ?? '—',
-          'docLabel': isAlumno ? 'Matrícula' : 'No. Empleado',
-          'docValue': isAlumno ? (matricula ?? '—') : (numEmpleado ?? '—'),
-          'phone': (x['telefono'] ?? x['Telefono'] ?? data['phone']).toString(),
-          'residence': (x['residencia'] ?? x['Residencia'] ?? data['residence'])
-              .toString(),
-          'address': (x['direccion'] ?? x['Direccion'] ?? data['address'])
-              .toString(),
-          'birthday': _formatFecha(
-            x['fecha_nacimiento'] ?? x['Fecha_Nacimiento'] ?? data['birthday'],
-          ),
-          'avatarUrl': avatar,
-          'status': (x['estado'] ?? x['Estado'] ?? data['status']).toString(),
-          'statusColorHex': colorHex,
-          'grade': (x['carrera'] ?? data['grade']).toString(),
-          'family': (x['nombre_familia'] ?? data['family']).toString(),
-        };
-      });
-    } catch (_) {}
-  }
-
-  Future<void> _loadProfile() async {
-    setState(() => _loading = true);
-    await _hydrateFromLocal();
-    await _fetchFromServer();
-    if (mounted) setState(() => _loading = false);
-  }
-
-  Future<void> _handleLogout() async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro de que deseas cerrar tu sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Cerrar Sesión'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      await _http.postJson('/api/auth/logout');
-    } catch (_) {}
-
-    await _storage.clear();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('user');
-
-    if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('login', (_) => false);
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(raw));
+    } catch (_) {
+      return raw.split('T')[0];
     }
   }
 
@@ -321,212 +79,434 @@ class _PerfilPageState extends State<PerfilPage> {
     return Colors.green;
   }
 
-  void _showEstadoSelector() async {
-    if (!_isAlumno || _userId == null) return;
+  // ── Profile photo upload ─────────────────────────────────────────────────
+  Future<void> _pickAndUploadProfile() async {
+    if (_userId == null || _userId == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo identificar el usuario')),
+      );
+      return;
+    }
+    final XFile? image = await MediaPicker.pickImage(context);
+    if (image == null) return;
+    setState(() => _loading = true);
+    try {
+      final stream = await _http.multipart(
+        '/api/usuarios/$_userId',
+        method: 'PUT',
+        files: [await http.MultipartFile.fromPath('foto', image.path)],
+        fields: {'nombre': data['name'].toString().split(' ')[0]},
+      );
+      if (stream.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto actualizada'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _fetchFromServer();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al subir la imagen'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // ── Data loading ─────────────────────────────────────────────────────────
+  Future<void> _hydrateFromLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('user');
+      if (raw == null) return;
+      final u = jsonDecode(raw) as Map<String, dynamic>;
+      final tipo = (u['tipo_usuario'] ?? u['TipoUsuario'] ?? '').toString();
+
+      int id = 0;
+      for (final k in ['id_usuario', 'IdUsuario', 'id']) {
+        if (u[k] != null) {
+          id = int.tryParse(u[k].toString()) ?? 0;
+          break;
+        }
+      }
+
+      String nombre = (u['nombre'] ?? u['Nombre'] ?? '').toString();
+      String apellido = (u['apellido'] ?? u['Apellido'] ?? '').toString();
+      String avatar = (u['foto_perfil'] ?? u['FotoPerfil'] ?? '').toString();
+      if (avatar.isNotEmpty && !avatar.startsWith('http')) {
+        avatar = '${ApiHttp.baseUrl}$avatar';
+      }
+
+      final isAlumno = tipo.toUpperCase() == 'ALUMNO';
+      final matricula = (u['matricula'] ?? u['Matricula'])?.toString();
+      final numEmpleado =
+          (u['num_empleado'] ?? u['numEmpleado'] ?? u['NumEmpleado'])
+              ?.toString();
+
+      setState(() {
+        _isAlumno = isAlumno;
+        _userId = id;
+        data = {
+          ...data,
+          'name': '$nombre $apellido'.trim().isEmpty
+              ? '—'
+              : '$nombre $apellido'.trim(),
+          'email': (u['correo'] ?? u['E_mail'] ?? '—').toString(),
+          'matricula': matricula ?? '—',
+          'numEmpleado': numEmpleado ?? '—',
+          'docLabel': isAlumno ? 'Matrícula' : 'No. Empleado',
+          'docValue': isAlumno ? (matricula ?? '—') : (numEmpleado ?? '—'),
+          'phone': (u['telefono'] ?? '—').toString(),
+          'residence': (u['residencia'] ?? '—').toString(),
+          'address': (u['direccion'] ?? '—').toString(),
+          'birthday': _formatFecha(
+            u['fecha_nacimiento'] ?? u['Fecha_Nacimiento'],
+          ),
+          'avatarUrl': avatar.isNotEmpty ? avatar : data['avatarUrl'],
+          'status': (u['estado'] ?? 'Activo').toString(),
+          'grade': (u['carrera'] ?? '—').toString(),
+          'family': (u['nombre_familia'] ?? '—').toString(),
+        };
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _fetchFromServer() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('user');
+      if (raw == null) return;
+      final uLocal = jsonDecode(raw) as Map<String, dynamic>;
+      final id = uLocal['IdUsuario'] ?? uLocal['id_usuario'] ?? _userId;
+      if (id == null) return;
+
+      final res = await _http.getJson('/api/usuarios/$id');
+      if (res.statusCode >= 400) return;
+      final x = jsonDecode(res.body) as Map<String, dynamic>;
+
+      String nombre = (x['nombre'] ?? x['Nombre'] ?? uLocal['nombre'] ?? '')
+          .toString();
+      String apellido =
+          (x['apellido'] ?? x['Apellido'] ?? uLocal['apellido'] ?? '')
+              .toString();
+      String avatar = (x['foto_perfil'] ?? x['FotoPerfil'] ?? '').toString();
+      if (avatar.isNotEmpty && !avatar.startsWith('http')) {
+        avatar = '${ApiHttp.baseUrl}$avatar';
+      }
+
+      final tipo = (x['tipo_usuario'] ?? x['TipoUsuario'] ?? '')
+          .toString()
+          .toUpperCase();
+      final isAlumno = tipo == 'ALUMNO';
+      final matricula = (x['matricula'] ?? x['Matricula'] ?? data['matricula'])
+          ?.toString();
+      final numEmpleado =
+          (x['num_empleado'] ??
+                  x['numEmpleado'] ??
+                  x['NumEmpleado'] ??
+                  data['numEmpleado'])
+              ?.toString();
+
+      setState(() {
+        _isAlumno = isAlumno;
+        data = {
+          ...data,
+          'name': '$nombre $apellido'.trim().isNotEmpty
+              ? '$nombre $apellido'.trim()
+              : data['name'],
+          'email': (x['correo'] ?? x['E_mail'] ?? data['email']).toString(),
+          'matricula': matricula ?? '—',
+          'numEmpleado': numEmpleado ?? '—',
+          'docLabel': isAlumno ? 'Matrícula' : 'No. Empleado',
+          'docValue': isAlumno ? (matricula ?? '—') : (numEmpleado ?? '—'),
+          'phone': (x['telefono'] ?? data['phone']).toString(),
+          'residence': (x['residencia'] ?? data['residence']).toString(),
+          'address': (x['direccion'] ?? data['address']).toString(),
+          'birthday': _formatFecha(
+            x['fecha_nacimiento'] ?? x['Fecha_Nacimiento'] ?? data['birthday'],
+          ),
+          'avatarUrl': avatar.isNotEmpty ? avatar : data['avatarUrl'],
+          'status': (x['estado'] ?? data['status']).toString(),
+          'statusColorHex': (x['color_estado'] ?? '#13436B').toString(),
+          'grade': (x['carrera'] ?? data['grade']).toString(),
+          'family': (x['nombre_familia'] ?? data['family']).toString(),
+        };
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() => _loading = true);
+    await _hydrateFromLocal();
+    await _fetchFromServer();
+    if (mounted) setState(() => _loading = false);
+  }
+
+  // ── Logout ───────────────────────────────────────────────────────────────
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cerrar Sesión'),
+        content: const Text('¿Estás seguro de que deseas cerrar tu sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+    try {
+      await _http.postJson('/api/auth/logout');
+    } catch (_) {}
+    await _storage.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user');
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('login', (_) => false);
+    }
+  }
 
+  // ── Estado selector ──────────────────────────────────────────────────────
+  void _showEstadoSelector() async {
+    if (!_isAlumno || _userId == null) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
     final catalogo = await _estadosApi.getCatalogo();
-
     if (!mounted) return;
     Navigator.pop(context);
-
     if (catalogo.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudieron cargar los estados')),
       );
       return;
     }
-
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                'Actualizar mi estado',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Actualizar mi estado',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: catalogo.length,
-                itemBuilder: (context, index) {
-                  final item = catalogo[index];
-                  return ListTile(
-                    leading: Icon(
-                      Icons.circle,
-                      size: 16,
-                      color: hexToColor(item['color'] ?? '#000000'),
-                    ),
-                    title: Text(item['descripcion']),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await _updateEstado(item['id_cat_estado']);
-                    },
-                  );
-                },
-              ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: catalogo.length,
+              itemBuilder: (_, i) {
+                final item = catalogo[i];
+                return ListTile(
+                  leading: Icon(
+                    Icons.circle,
+                    size: 16,
+                    color: hexToColor(item['color'] ?? '#000000'),
+                  ),
+                  title: Text(item['descripcion']),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _updateEstado(item['id_cat_estado']);
+                  },
+                );
+              },
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
   Future<void> _updateEstado(int idCatEstado) async {
     setState(() => _loading = true);
-    final success = await _estadosApi.updateEstado(_userId!, idCatEstado);
-    if (success) {
+    final ok = await _estadosApi.updateEstado(_userId!, idCatEstado);
+    if (ok) {
       await _fetchFromServer();
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Estado actualizado correctamente')),
+          const SnackBar(
+            content: Text('Estado actualizado'),
+            backgroundColor: Colors.green,
+          ),
         );
-      }
     } else {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al actualizar estado')),
+          const SnackBar(
+            content: Text('Error al actualizar estado'),
+            backgroundColor: Colors.red,
+          ),
         );
-      }
     }
     setState(() => _loading = false);
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final content = _loading
-        ? const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        : _buildContent(context);
-
     return Scaffold(
-      backgroundColor: const Color(0xfff7f8fa),
+      backgroundColor: const Color(0xFFF0F4F8),
       body: RefreshIndicator(
         onRefresh: _loadProfile,
-        child: NestedScrollView(
-          floatHeaderSlivers: true,
-          headerSliverBuilder: (context, _) => [
+        child: CustomScrollView(
+          slivers: [
+            // ── App Bar ──────────────────────────────────────────────────
             SliverAppBar(
-              title: const Text('Mi perfil'),
-              backgroundColor: primary,
+              title: const Text(
+                'Mi Perfil',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor: _primary,
               automaticallyImplyLeading: false,
-              elevation: 0,
-              floating: true,
-              snap: true,
+              pinned: true,
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.logout_rounded, color: Colors.white),
                   tooltip: 'Cerrar sesión',
-                  icon: const Icon(Icons.logout),
                   onPressed: _handleLogout,
                 ),
               ],
             ),
+
+            // ── Content ──────────────────────────────────────────────────
+            if (_loading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Header card
+                    HeaderCard(
+                      name: s('name'),
+                      family: s('family'),
+                      residence: s('residence'),
+                      status: s('status', 'Activo'),
+                      avatarUrl: s('avatarUrl'),
+                      primary: _primary,
+                      statusColor: data['statusColorHex'] != null
+                          ? hexToColor(data['statusColorHex'])
+                          : _statusColor(s('status', 'Activo')),
+                      onEditAvatar: _pickAndUploadProfile,
+                      onTapStatus: _isAlumno ? _showEstadoSelector : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Academic info
+                    SectionCard(
+                      title: 'Información Académica',
+                      primary: _primary,
+                      icon: Icons.school_rounded,
+                      children: [
+                        InfoRow(
+                          icon: Icons.badge_outlined,
+                          label: s('docLabel'),
+                          value: s('docValue'),
+                          accent: _primary,
+                        ),
+                        InfoRow(
+                          icon: Icons.menu_book_rounded,
+                          label: 'Programa',
+                          value: s('grade'),
+                          accent: _primary,
+                        ),
+                        InfoRow(
+                          icon: Icons.cake_rounded,
+                          label: 'Cumpleaños',
+                          value: s('birthday'),
+                          accent: const Color(0xFFE91E63),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Contact info
+                    SectionCard(
+                      title: 'Contacto',
+                      primary: _primary,
+                      icon: Icons.contact_phone_rounded,
+                      children: [
+                        InfoRow(
+                          icon: Icons.call_rounded,
+                          label: 'Teléfono',
+                          value: s('phone'),
+                          accent: const Color(0xFF2E7D32),
+                        ),
+                        InfoRow(
+                          icon: Icons.mail_rounded,
+                          label: 'Correo',
+                          value: s('email'),
+                          accent: _primary,
+                        ),
+                        if (!isInternal)
+                          InfoRow(
+                            icon: Icons.home_rounded,
+                            label: 'Dirección',
+                            value: s('address'),
+                            accent: const Color(0xFF5D4037),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Logout button
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text(
+                        'Cerrar sesión',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: _handleLogout,
+                    ),
+                  ]),
+                ),
+              ),
           ],
-          body: content,
         ),
       ),
     );
-  }
-
-  Widget _buildContent(BuildContext context) {
-    final p = primary;
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            HeaderCard(
-              name: s('name'),
-              family: s('family'),
-              residence: s('residence'),
-              status: s('status', 'Activo'),
-              avatarUrl: s('avatarUrl'),
-              primary: p,
-              statusColor: data['statusColorHex'] != null
-                  ? hexToColor(data['statusColorHex'])
-                  : _statusColor(s('status', 'Activo')),
-              onEditAvatar: _pickAndUploadProfile,
-              onTapStatus: _isAlumno ? _showEstadoSelector : null,
-            ),
-            const SizedBox(height: 12),
-            SectionCard(
-              title: 'Datos',
-              primary: p,
-              children: [
-                InfoRow(
-                  icon: Icons.badge_outlined,
-                  label: s('docLabel'),
-                  value: s('docValue'),
-                ),
-                InfoRow(
-                  icon: Icons.school_outlined,
-                  label: 'Programa',
-                  value: s('grade'),
-                ),
-                InfoRow(
-                  icon: Icons.cake_outlined,
-                  label: 'Cumpleaños',
-                  value: s('birthday'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SectionCard(
-              title: 'Contacto',
-              primary: p,
-              children: [
-                InfoRow(
-                  icon: Icons.call_outlined,
-                  label: 'Teléfono',
-                  value: s('phone'),
-                ),
-                InfoRow(
-                  icon: Icons.mail_outline,
-                  label: 'Correo',
-                  value: s('email'),
-                ),
-                if (!isInternal)
-                  InfoRow(
-                    icon: Icons.home_outlined,
-                    label: 'Dirección',
-                    value: s('address'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-Color hexToColor(String hexString, {Color defaultColor = Colors.blue}) {
-  try {
-    final buffer = StringBuffer();
-    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
-    buffer.write(hexString.replaceFirst('#', ''));
-    return Color(int.parse(buffer.toString(), radix: 16));
-  } catch (e) {
-    return defaultColor;
   }
 }

@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:edi301/tools/fullscreen_image_viewer.dart';
 
+// ─── Color helpers ────────────────────────────────────────────────────────────
+Color hexToColor(String hex, {Color fallback = Colors.blue}) {
+  try {
+    final buf = StringBuffer();
+    if (hex.length == 6 || hex.length == 7) buf.write('ff');
+    buf.write(hex.replaceFirst('#', ''));
+    return Color(int.parse(buf.toString(), radix: 16));
+  } catch (_) {
+    return fallback;
+  }
+}
+
+// ─── Header Card ─────────────────────────────────────────────────────────────
 class HeaderCard extends StatelessWidget {
   const HeaderCard({
     super.key,
@@ -20,7 +33,10 @@ class HeaderCard extends StatelessWidget {
   final VoidCallback onEditAvatar;
   final VoidCallback? onTapStatus;
 
-  ImageProvider _getImageProvider() {
+  static const _gold = Color.fromRGBO(245, 188, 6, 1);
+  static const _navyL = Color.fromRGBO(30, 85, 135, 1);
+
+  ImageProvider _imgProvider() {
     if (avatarUrl.isNotEmpty &&
         avatarUrl != '—' &&
         !avatarUrl.contains('null')) {
@@ -31,50 +47,69 @@ class HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageProvider = _getImageProvider();
+    final imgProvider = _imgProvider();
     final heroTag = 'user_avatar_${avatarUrl.hashCode}';
-    return Card(
-      elevation: 2,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Stack(
+    final hasAvatar =
+        avatarUrl.isNotEmpty && !avatarUrl.contains('null') && avatarUrl != '—';
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [primary, _navyL],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withOpacity(0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
         children: [
-          Container(height: 120, color: primary),
+          // ── Top section: avatar + name ─────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // Avatar
                 Stack(
                   children: [
                     GestureDetector(
-                      onTap: () {
-                        if (avatarUrl.isNotEmpty &&
-                            !avatarUrl.contains('null') &&
-                            avatarUrl != '—') {
-                          FullScreenImageViewer.open(
-                            context,
-                            imageProvider: imageProvider,
-                            heroTag: heroTag,
-                          );
-                        }
-                      },
+                      onTap: hasAvatar
+                          ? () => FullScreenImageViewer.open(
+                              context,
+                              imageProvider: imgProvider,
+                              heroTag: heroTag,
+                            )
+                          : null,
                       child: Hero(
                         tag: heroTag,
-                        child: CircleAvatar(
-                          radius: 44,
-                          backgroundColor: Colors.white,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _gold, width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
                           child: CircleAvatar(
-                            radius: 40,
+                            radius: 42,
                             backgroundColor: Colors.grey[200],
-                            backgroundImage: imageProvider,
+                            backgroundImage: imgProvider,
                             onBackgroundImageError: (_, __) {},
-                            child:
-                                (avatarUrl.isEmpty ||
-                                    avatarUrl.contains('null'))
+                            child: !hasAvatar
                                 ? const Icon(
                                     Icons.person,
-                                    size: 40,
+                                    size: 42,
                                     color: Colors.grey,
                                   )
                                 : null,
@@ -82,20 +117,28 @@ class HeaderCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Camera button
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
                         onTap: onEditAvatar,
                         child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color.fromRGBO(245, 188, 6, 1),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: _gold,
                             shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: const Icon(
-                            Icons.camera_alt,
-                            size: 18,
+                            Icons.camera_alt_rounded,
+                            size: 16,
                             color: Colors.black,
                           ),
                         ),
@@ -103,86 +146,251 @@ class HeaderCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(width: 15),
+                const SizedBox(width: 16),
+
+                // Name + status
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
                         ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: -8,
-                          children: [
-                            onTapStatus != null
-                                ? ActionChip(
-                                    avatar: const Icon(
-                                      Icons.edit,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                    label: Text(status),
-                                    backgroundColor: statusColor,
-                                    labelStyle: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    onPressed: onTapStatus,
-                                    visualDensity: VisualDensity.compact,
-                                    side: BorderSide.none,
-                                  )
-                                : Chip(
-                                    avatar: Icon(
-                                      Icons.circle,
-                                      size: 14,
-                                      color: statusColor,
-                                    ),
-                                    label: Text(status),
-                                    backgroundColor: statusColor.withOpacity(
-                                      0.15,
-                                    ),
-                                    labelStyle: TextStyle(
-                                      color: statusColor,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    visualDensity: VisualDensity.compact,
-                                    side: BorderSide(
-                                      color: statusColor.withOpacity(0.35),
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                            if (residence.isNotEmpty && residence != '—')
-                              Chip(
-                                label: Text('Residencia: $residence'),
-                                visualDensity: VisualDensity.compact,
-                                backgroundColor: Colors.white,
-                              ),
-                            if (family.isNotEmpty && family != '—')
-                              Chip(
-                                label: Text('$family'),
-                                visualDensity: VisualDensity.compact,
-                                backgroundColor: const Color.fromARGB(
-                                  255,
-                                  174,
-                                  174,
-                                  174,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      // Status chip
+                      GestureDetector(
+                        onTap: onTapStatus,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: statusColor.withOpacity(0.5),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.circle, size: 8, color: statusColor),
+                              const SizedBox(width: 5),
+                              Text(
+                                status,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                          ],
+                              if (onTapStatus != null) ...[
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit_rounded,
+                                  size: 11,
+                                  color: statusColor,
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Bottom section: family + residence badges ──────────────────
+          if ((family.isNotEmpty && family != '—') ||
+              (residence.isNotEmpty && residence != '—'))
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.15),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (family.isNotEmpty && family != '—')
+                    _badge(Icons.family_restroom_rounded, family),
+                  if (residence.isNotEmpty && residence != '—')
+                    _badge(Icons.home_rounded, 'Residencia $residence'),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _badge(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.white70),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Section Card ─────────────────────────────────────────────────────────────
+class SectionCard extends StatelessWidget {
+  const SectionCard({
+    super.key,
+    required this.title,
+    required this.children,
+    required this.primary,
+    this.icon,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final Color primary;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                if (icon != null) ...[
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Icon(icon, size: 16, color: primary),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: primary,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Column(children: children),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Info Row ─────────────────────────────────────────────────────────────────
+class InfoRow extends StatelessWidget {
+  const InfoRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.accent,
+  });
+
+  final IconData icon;
+  final String label, value;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = accent ?? Colors.grey.shade600;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                SelectableText(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -194,82 +402,7 @@ class HeaderCard extends StatelessWidget {
   }
 }
 
-class SectionCard extends StatelessWidget {
-  const SectionCard({
-    super.key,
-    required this.title,
-    required this.children,
-    required this.primary,
-  });
-  final String title;
-  final List<Widget> children;
-  final Color primary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: primary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class InfoRow extends StatelessWidget {
-  const InfoRow({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-  final IconData icon;
-  final String label, value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[700]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
-                ),
-                const SizedBox(height: 2),
-                SelectableText(value, style: textTheme.bodyMedium),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+// ─── Settings Card (unchanged, kept for compatibility) ────────────────────────
 class SettingsCard extends StatelessWidget {
   const SettingsCard({
     super.key,
@@ -287,45 +420,54 @@ class SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          _divider(),
-          _switchTile(
-            icon: Icons.dark_mode_outlined,
-            title: 'Modo oscuro',
-            value: darkMode,
-            onChanged: (v) => onChanged('dark', v),
-          ),
-          _divider(),
-          _switchTile(
-            icon: Icons.cake_outlined,
-            title: 'Recordar cumpleaños',
-            value: birthdayReminder,
-            onChanged: (v) => onChanged('bd', v),
+          _tile(Icons.dark_mode_outlined, 'Modo oscuro', darkMode, 'dark'),
+          _div(),
+          _tile(
+            Icons.cake_outlined,
+            'Recordar cumpleaños',
+            birthdayReminder,
+            'bd',
           ),
         ],
       ),
     );
   }
 
-  Widget _divider() => const Divider(height: 1, indent: 16, endIndent: 16);
+  Widget _div() => const Divider(height: 1, indent: 56, endIndent: 16);
 
-  Widget _switchTile({
-    required IconData icon,
-    required String title,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
+  Widget _tile(IconData icon, String title, bool value, String key) {
     return SwitchListTile.adaptive(
       value: value,
-      onChanged: onChanged,
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      secondary: Icon(icon, color: primary),
+      onChanged: (v) => onChanged(key, v),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      secondary: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Icon(icon, size: 18, color: primary),
+      ),
       dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
     );
   }
 }

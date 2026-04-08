@@ -50,6 +50,39 @@ class RegisterController {
 
     loading.value = true;
     try {
+      // ── Verificar si ya está registrado en EDI 301 ─────────────────
+      final isNumeric = RegExp(r'^\d+$').hasMatch(document);
+      if (isNumeric) {
+        // Intentar como alumno primero, luego como empleado
+        for (final tipo in ['ALUMNO', 'EMPLEADO']) {
+          final checkRes = await ApiHttp().getJson(
+            '/api/usuarios',
+            query: {'tipo': tipo, 'q': document},
+          );
+          if (checkRes.statusCode == 200) {
+            final List<dynamic> found = jsonDecode(checkRes.body);
+            // Verificar coincidencia exacta de matrícula o num_empleado
+            final yaRegistrado = found.any((u) {
+              final mat = (u['Matricula'] ?? u['matricula'])?.toString() ?? '';
+              final emp =
+                  (u['NumEmpleado'] ?? u['num_empleado'])?.toString() ?? '';
+              return mat == document || emp == document;
+            });
+            if (yaRegistrado) {
+              final label = tipo == 'ALUMNO'
+                  ? 'matrícula'
+                  : 'número de colaborador';
+              _snack(
+                'Esta $label ya tiene una cuenta registrada en EDI 301. '
+                'Si olvidaste tu contraseña, usa la opción "¿Olvidaste tu contraseña?".',
+              );
+              loading.value = false;
+              return;
+            }
+          }
+        }
+      }
+      // ── Buscar en API institucional ────────────────────────────────
       final uri = Uri.parse('$_institutionalApiUrl$document');
       final response = await http.get(uri);
 
