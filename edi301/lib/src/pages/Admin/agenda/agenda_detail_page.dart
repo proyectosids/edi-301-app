@@ -3,6 +3,7 @@ import 'package:edi301/core/api_client_http.dart';
 import 'package:edi301/src/widgets/responsive_content.dart';
 import 'package:flutter/material.dart';
 import 'package:edi301/services/eventos_api.dart';
+import 'package:edi301/core/api_error.dart';
 
 class AgendaDetailPage extends StatelessWidget {
   const AgendaDetailPage({super.key});
@@ -38,7 +39,7 @@ class AgendaDetailPage extends StatelessWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error al eliminar: $e'),
+              content: Text(friendlyError(e)),
               backgroundColor: Colors.red,
             ),
           );

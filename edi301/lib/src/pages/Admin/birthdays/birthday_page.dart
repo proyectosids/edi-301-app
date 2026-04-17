@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:edi301/services/users_api.dart';
 import 'package:edi301/core/api_client_http.dart';
 import 'package:http/http.dart' as http;
+import 'package:edi301/core/api_error.dart';
 
 // ─── Modelo ligero para cumpleañeros ─────────────────────────────────────────
 class _Cumpleanero {
@@ -364,7 +365,7 @@ class _ImagenFelicitacionPageState extends State<_ImagenFelicitacionPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
         );
       }
     } finally {

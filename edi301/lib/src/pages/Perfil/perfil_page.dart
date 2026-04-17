@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:edi301/tools/media_picker.dart';
+import 'package:edi301/core/api_error.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
@@ -115,7 +116,7 @@ class _PerfilPageState extends State<PerfilPage> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
       );
     } finally {
       if (mounted) setState(() => _loading = false);

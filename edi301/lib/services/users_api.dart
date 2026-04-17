@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client_http.dart';
+import '../core/api_error.dart';
 import '../models/user.dart';
 import 'package:edi301/models/family_model.dart' as fm;
 
@@ -44,7 +45,7 @@ class UsersApi {
   Future<void> deleteSoft(int id) async {
     final res = await _http.deleteJson('/api/usuarios/$id');
     if (res.statusCode >= 400) {
-      throw Exception('No se pudo eliminar: ${res.statusCode} ${res.body}');
+      throw Exception(parseHttpError(res));
     }
   }
 
@@ -93,7 +94,7 @@ class UsersApi {
     };
     final res = await _http.postJson('/api/usuarios/register', data: payload);
     if (res.statusCode >= 400) {
-      throw Exception('Error ${res.statusCode}: ${res.body}');
+      throw Exception(parseHttpError(res));
     }
     final id = (jsonDecode(res.body) as Map)['IdUsuario'] as int;
     return getById(id);
@@ -118,7 +119,7 @@ class UsersApi {
     };
     final r = await _http.postJson('/api/usuarios/register', data: payload);
     if (r.statusCode >= 400) {
-      throw Exception('Error ${r.statusCode}: ${r.body}');
+      throw Exception(parseHttpError(r));
     }
     final id = (jsonDecode(r.body) as Map)['IdUsuario'] as int;
     return getById(id);
@@ -151,7 +152,7 @@ class UsersApi {
     final res = await _http.postJson('/api/usuarios', data: payload);
 
     if (res.statusCode >= 400) {
-      throw Exception('Error ${res.statusCode}: ${res.body}');
+      throw Exception(parseHttpError(res));
     }
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
@@ -166,7 +167,7 @@ class UsersApi {
       data: {"E_mail": email, "Contrasena": password},
     );
     if (r.statusCode >= 400) {
-      throw Exception('Error ${r.statusCode}: ${r.body}');
+      throw Exception(parseHttpError(r));
     }
     final Map<String, dynamic> data =
         jsonDecode(r.body) as Map<String, dynamic>;
@@ -185,7 +186,7 @@ class UsersApi {
   Future<User> getById(int id) async {
     final r = await _http.getJson('/api/usuarios/$id');
     if (r.statusCode >= 400) {
-      throw Exception('Error ${r.statusCode}: ${r.body}');
+      throw Exception(parseHttpError(r));
     }
 
     final Map<String, dynamic> data =
@@ -212,7 +213,7 @@ class UsersApi {
       },
     );
     if (r.statusCode >= 400) {
-      throw Exception('Error ${r.statusCode}: ${r.body}');
+      throw Exception(parseHttpError(r));
     }
     final decoded = jsonDecode(r.body);
     if (decoded is List) {
@@ -249,7 +250,7 @@ class UsersApi {
 
     final r = await _http.patchJson('/api/usuarios/$id', data: payload);
     if (r.statusCode >= 400) {
-      throw Exception('Error ${r.statusCode}: ${r.body}');
+      throw Exception(parseHttpError(r));
     }
 
     final Map<String, dynamic> data =

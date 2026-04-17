@@ -4,6 +4,7 @@ import 'package:edi301/models/family_model.dart';
 import 'package:edi301/services/search_api.dart';
 import 'package:edi301/services/members_api.dart';
 import 'package:edi301/constants/member_types.dart';
+import 'package:edi301/core/api_error.dart';
 
 class AddAlumnsController {
   BuildContext? context;
@@ -110,7 +111,7 @@ class AddAlumnsController {
       }
     } catch (e) {
       loading.value = false;
-      _snack(e.toString().replaceFirst("Exception: ", ""));
+      _snack(friendlyError(e));
     }
   }
 

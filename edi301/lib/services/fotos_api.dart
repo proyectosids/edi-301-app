@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:edi301/core/api_client_http.dart';
+import 'package:edi301/core/api_error.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:edi301/auth/token_storage.dart';
@@ -27,7 +28,7 @@ class FotosApi {
   Future<String> _uploadImage(String endpoint, File imageFile) async {
     final token = await _tokenStorage.read();
     if (token == null) {
-      throw Exception('Token no encontrado. Inicie sesión de nuevo.');
+      throw Exception('Sesión expirada. Por favor inicia sesión de nuevo.');
     }
 
     var uri = Uri.parse('$_baseUrl/$endpoint');
@@ -51,9 +52,7 @@ class FotosApi {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return response.body;
     } else {
-      throw Exception(
-        'Error al subir imagen. Código: ${response.statusCode} - ${response.body}',
-      );
+      throw Exception(parseStreamError(response.statusCode, response.body));
     }
   }
 

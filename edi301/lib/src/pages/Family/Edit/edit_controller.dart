@@ -6,6 +6,7 @@ import 'package:edi301/services/familia_api.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:edi301/tools/media_picker.dart';
+import 'package:edi301/core/api_error.dart';
 
 class EditController {
   BuildContext? context;
@@ -83,7 +84,7 @@ class EditController {
     } catch (e) {
       if (context != null) {
         ScaffoldMessenger.of(context!).showSnackBar(
-          SnackBar(content: Text('Error al seleccionar imagen: $e')),
+          const SnackBar(content: Text('No se pudo seleccionar la imagen. Inténtalo de nuevo.'), backgroundColor: Colors.orange),
         );
       }
     }
@@ -97,7 +98,7 @@ class EditController {
     } catch (e) {
       if (context != null) {
         ScaffoldMessenger.of(context!).showSnackBar(
-          SnackBar(content: Text('Error al seleccionar imagen: $e')),
+          const SnackBar(content: Text('No se pudo seleccionar la imagen. Inténtalo de nuevo.'), backgroundColor: Colors.orange),
         );
       }
     }
@@ -197,7 +198,7 @@ class EditController {
       if (context != null && context!.mounted) {
         ScaffoldMessenger.of(
           context!,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700));
       }
     } finally {
       isLoading.value = false;

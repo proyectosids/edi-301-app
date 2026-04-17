@@ -8,7 +8,9 @@ import 'package:edi301/services/members_api.dart';
 import 'package:edi301/services/publicaciones_api.dart';
 import 'package:edi301/src/pages/Admin/add_alumns/add_alumns_controller.dart';
 import 'package:edi301/src/pages/Admin/reportes/reporte_familia_individual_service.dart';
+import 'package:edi301/src/pages/Admin/family_detail/edit_family_page.dart';
 import 'package:edi301/core/api_client_http.dart';
+import 'package:edi301/core/api_error.dart';
 
 class FamilyDetailPage extends StatefulWidget {
   const FamilyDetailPage({super.key});
@@ -26,6 +28,7 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
   final _membersApi = MembersApi();
   final _pubApi = PublicacionesApi();
   final _reporteService = ReporteFamiliaIndividualService();
+  final _familiaApi = FamiliaApi();
 
   bool _realtimeSetup = false;
   int? _rtFamilyId;
@@ -135,8 +138,8 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al generar PDF: $e'),
+          const SnackBar(
+            content: Text('No se pudo generar el PDF. Inténtalo de nuevo.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -195,7 +198,7 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
         );
       }
     }
@@ -280,6 +283,154 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
     );
   }
 
+  // ── Acciones de familia (desactivar, eliminar, editar) ─────────────────────
+
+  Future<void> _handleDeactivate() async {
+    final fam = _family!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('¿Desactivar familia?'),
+        content: Text(
+            'La familia "${fam.familyName}" quedará inactiva pero sus datos se conservarán.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Desactivar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await _familiaApi.deactivateFamily(fam.id!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Familia desactivada.'),
+            backgroundColor: Colors.orange),
+      );
+      Navigator.pop(context, true); // Volver al listado
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
+        );
+      }
+    }
+  }
+
+  Future<void> _handlePermanentDelete() async {
+    final fam = _family!;
+    // Doble confirmación para una acción irreversible
+    final first = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Eliminar permanentemente'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('¿Eliminar la familia "${fam.familyName}" de forma permanente?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_rounded, color: Colors.red, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Esta acción no se puede deshacer. Se borrarán todos los miembros y registros relacionados.',
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sí, eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (first != true || !mounted) return;
+
+    // Segunda confirmación
+    final second = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Confirma la eliminación'),
+        content: const Text(
+            '¿Seguro? Esta es una acción irreversible.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar definitivamente'),
+          ),
+        ],
+      ),
+    );
+    if (second != true || !mounted) return;
+
+    try {
+      await _familiaApi.permanentDeleteFamily(fam.id!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Familia eliminada permanentemente.'),
+            backgroundColor: Colors.red),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleEdit() async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditFamilyPage(family: _family!),
+      ),
+    );
+    if (updated == true && mounted) {
+      setState(() => _isLoading = true);
+      await _fetchFamilyDetails(_family!.id!);
+    }
+  }
+
   // ── Tab 1: Integrantes (original content) ──────────────────────────────────
   Widget _buildIntegrantesTab(Family fam) {
     return ListView(
@@ -346,6 +497,57 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
               await _fetchFamilyDetails(fam.id!);
             }
           },
+        ),
+
+        // ── Admin actions ──────────────────────────────────────────────────
+        const SizedBox(height: 8),
+        const Divider(),
+        const SizedBox(height: 8),
+
+        // Editar
+        OutlinedButton.icon(
+          icon: const Icon(Icons.edit, color: _primary),
+          label: const Text('Editar familia',
+              style: TextStyle(color: _primary)),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: _primary),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          onPressed: _handleEdit,
+        ),
+
+        const SizedBox(height: 8),
+
+        // Desactivar
+        OutlinedButton.icon(
+          icon: const Icon(Icons.visibility_off, color: Colors.orange),
+          label: const Text('Desactivar familia',
+              style: TextStyle(color: Colors.orange)),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: Colors.orange),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          onPressed: _handleDeactivate,
+        ),
+
+        const SizedBox(height: 8),
+
+        // Eliminar permanentemente
+        OutlinedButton.icon(
+          icon: const Icon(Icons.delete_forever, color: Colors.red),
+          label: const Text('Eliminar permanentemente',
+              style: TextStyle(color: Colors.red)),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: Colors.red),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          onPressed: _handlePermanentDelete,
         ),
       ],
     );

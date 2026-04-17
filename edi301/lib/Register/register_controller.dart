@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:edi301/models/institutional_user.dart';
 import 'package:edi301/core/api_client_http.dart';
+import 'package:edi301/core/api_error.dart';
 import 'package:edi301/services/otp_service.dart';
 
 class RegisterController {
@@ -126,7 +127,7 @@ class RegisterController {
         throw Exception('No se encontraron datos válidos.');
       }
     } catch (e) {
-      _snack(e.toString().replaceFirst('Exception: ', ''));
+      _snack(friendlyError(e));
     } finally {
       loading.value = false;
     }
@@ -153,9 +154,7 @@ class RegisterController {
       _snack('Código enviado a tu correo.', isError: false);
       registrationStep.value = 2; // Avanza si todo salió bien
     } catch (e) {
-      _snack(
-        'Error al enviar correo: ${e.toString().replaceFirst('Exception: ', '')}',
-      );
+      _snack('No se pudo enviar el código. ${friendlyError(e)}');
     } finally {
       loading.value = false;
     }
@@ -268,31 +267,18 @@ class RegisterController {
       };
 
       final res = await _http.postJson('/api/usuarios', data: payload);
+      if (res.statusCode == 409) {
+        throw Exception('Ya existe una cuenta vinculada a ese correo o matrícula. Si olvidaste tu contraseña, usa la opción de recuperación.');
+      }
       if (res.statusCode >= 400) {
-        String errorMsg = 'Error ${res.statusCode}';
-        try {
-          final body = jsonDecode(res.body);
-          if (body is Map && body.containsKey('error')) {
-            errorMsg = body['error'];
-          } else if (body is Map && body.containsKey('message')) {
-            errorMsg = body['message'];
-          }
-        } catch (_) {
-          errorMsg = res.body;
-        }
-        if (errorMsg.contains('CK_Usuarios'))
-          errorMsg = 'Error de validación en base de datos.';
-        if (errorMsg.contains('Violation of UNIQUE KEY'))
-          errorMsg = 'El usuario ya está registrado.';
-
-        throw Exception(errorMsg);
+        throw Exception(parseHttpError(res));
       }
 
       _snack('Registro exitoso. Ahora puedes iniciar sesión.', isError: false);
       goToLoginPage();
     } catch (e) {
       print('Error en registro: $e');
-      _snack(e.toString().replaceFirst('Exception: ', ''));
+      _snack(friendlyError(e));
     } finally {
       loading.value = false;
     }

@@ -11,10 +11,10 @@ class ApiHttp extends http.BaseClient {
   factory ApiHttp() => _i;
 
   // dev
-  //static const String baseUrl = 'http://10.238.51.158:3000';
+  static const String baseUrl = 'http://192.168.100.7:3000';
 
   // prod
-  static const String baseUrl = 'https://edi301.apps.isdapps.uk';
+  //static const String baseUrl = 'https://edi301.apps.isdapps.uk';
 
   final http.Client _inner = http.Client();
   final Duration _timeout = const Duration(seconds: 20);

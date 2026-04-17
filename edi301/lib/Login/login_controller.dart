@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/token_storage.dart';
 import '../core/api_client_http.dart';
+import '../core/api_error.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:edi301/services/users_api.dart';
 
@@ -46,8 +47,17 @@ class LoginController {
         data: {'login': login, 'password': password},
       );
 
+      if (res.statusCode == 401 || res.statusCode == 400) {
+        throw Exception('Correo o contraseña incorrectos. Verifica tus datos.');
+      }
+      if (res.statusCode == 403) {
+        throw Exception('Tu cuenta está desactivada. Contacta al administrador.');
+      }
+      if (res.statusCode == 404) {
+        throw Exception('No existe una cuenta registrada con ese correo.');
+      }
       if (res.statusCode >= 400) {
-        throw Exception('Credenciales inválidas (${res.statusCode})');
+        throw Exception(parseHttpError(res));
       }
 
       final Map<String, dynamic> data =
@@ -113,7 +123,7 @@ class LoginController {
       FocusScope.of(_ctx).unfocus();
       Navigator.of(_ctx).pushNamedAndRemoveUntil(route, (_) => false);
     } catch (e) {
-      _snack(e.toString().replaceFirst('Exception: ', ''));
+      _snack(friendlyError(e));
     } finally {
       loading.value = false;
     }
@@ -135,7 +145,11 @@ class LoginController {
   void _snack(String msg) {
     if (!_ctx.mounted) return;
     ScaffoldMessenger.of(_ctx).showSnackBar(
-      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.red.shade700,
+      ),
     );
   }
 }

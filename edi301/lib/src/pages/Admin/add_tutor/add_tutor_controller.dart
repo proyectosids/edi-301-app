@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:edi301/services/users_api.dart';
+import 'package:edi301/core/api_error.dart';
 
 class AddTutorController {
   final UsersApi _usersApi = UsersApi();
@@ -98,10 +99,7 @@ class AddTutorController {
       }
     } catch (e) {
       loading.value = false;
-      _snack(
-        context,
-        'Error al registrar: ${e.toString().replaceAll("Exception: ", "")}',
-      );
+      _snack(context, friendlyError(e));
     }
   }
 

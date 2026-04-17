@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:edi301/core/api_client_http.dart';
+import 'package:edi301/core/api_error.dart';
 import 'package:edi301/models/family_model.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -38,13 +39,7 @@ class FamiliaApi {
     final res = await _http.postJson('/api/familias', data: payload);
     debugPrint('POST /api/familias -> ${res.statusCode} :: ${res.body}');
     if (res.statusCode >= 400) {
-      try {
-        final decoded = jsonDecode(res.body);
-        if (decoded is Map && decoded.containsKey('error')) {
-          throw Exception(decoded['error']);
-        }
-      } catch (_) {}
-      throw Exception('Error ${res.statusCode}: ${res.body}');
+      throw Exception(parseHttpError(res));
     }
 
     final decoded = jsonDecode(res.body);
@@ -54,13 +49,13 @@ class FamiliaApi {
           : decoded;
       return Family.fromJson(m);
     }
-    throw Exception('Respuesta inválida del servidor al crear familia');
+    throw Exception('Respuesta inválida del servidor al crear familia.');
   }
 
   Future<List<Map<String, dynamic>>> buscarFamiliasPorNombre(String q) async {
     final res = await _http.getJson('/api/familias/search', query: {'name': q});
     if (res.statusCode >= 400) {
-      throw Exception('Error ${res.statusCode}: ${res.body}');
+      throw Exception(parseHttpError(res));
     }
 
     final data = jsonDecode(res.body);
@@ -83,7 +78,7 @@ class FamiliaApi {
       if (authToken == null) {
         final res = await _http.getJson('/api/familias/$id');
         if (res.statusCode >= 400) {
-          throw Exception('Error ${res.statusCode}: ${res.body}');
+          throw Exception(parseHttpError(res));
         }
         final data = jsonDecode(res.body);
         if (data is Map) return Map<String, dynamic>.from(data);
@@ -100,7 +95,7 @@ class FamiliaApi {
       final responseBody = await response.stream.bytesToString();
 
       if (response.statusCode >= 400) {
-        throw Exception('Error ${response.statusCode}: $responseBody');
+        throw Exception(parseStreamError(response.statusCode, responseBody));
       }
 
       final data = jsonDecode(responseBody);
@@ -115,7 +110,7 @@ class FamiliaApi {
   Future<Map<String, dynamic>?> getByIdent(int ident) async {
     final res = await _http.getJson('/api/familias/por-ident/$ident');
     if (res.statusCode >= 400) {
-      throw Exception('Error ${res.statusCode}: ${res.body}');
+      throw Exception(parseHttpError(res));
     }
 
     final data = jsonDecode(res.body);
@@ -156,7 +151,7 @@ class FamiliaApi {
       return true;
     } else {
       final responseBody = await response.stream.bytesToString();
-      throw Exception('Error ${response.statusCode}: $responseBody');
+      throw Exception(parseStreamError(response.statusCode, responseBody));
     }
   }
 
@@ -180,7 +175,7 @@ class FamiliaApi {
         return true;
       } else {
         final responseBody = await response.stream.bytesToString();
-        throw Exception('Error ${response.statusCode}: $responseBody');
+        throw Exception(parseStreamError(response.statusCode, responseBody));
       }
     } catch (e) {
       print('Error al actualizar descripción: $e');
@@ -197,5 +192,62 @@ class FamiliaApi {
       if (decoded is Map && decoded.containsKey('data')) return decoded['data'];
     }
     return [];
+  }
+
+  /// Lista familias desactivadas (activo = 0)
+  Future<List<dynamic>> getInactive() async {
+    final res = await _http.getJson('/api/familias/inactivas');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+    final decoded = jsonDecode(res.body);
+    if (decoded is List) return decoded;
+    if (decoded is Map && decoded['data'] is List) return decoded['data'] as List;
+    return [];
+  }
+
+  /// Reactiva una familia desactivada
+  Future<void> reactivateFamily(int id) async {
+    final res = await _http.patchJson('/api/familias/$id/reactivar');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+  }
+
+  /// Desactiva (soft-delete) una familia
+  Future<void> deactivateFamily(int id) async {
+    final res = await _http.deleteJson('/api/familias/$id');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+  }
+
+  /// Elimina permanentemente una familia y todos sus miembros
+  Future<void> permanentDeleteFamily(int id) async {
+    final res = await _http.deleteJson('/api/familias/$id/permanent');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+  }
+
+  /// Edita campos de una familia (padre, madre, nombre, residencia, hijos)
+  Future<Map<String, dynamic>?> updateFamily({
+    required int id,
+    String? nombreFamilia,
+    String? residencia,
+    String? direccion,
+    int? papaId,
+    int? mamaId,
+  }) async {
+    final payload = <String, dynamic>{
+      if (nombreFamilia != null) 'nombre_familia': nombreFamilia,
+      if (residencia != null) 'residencia': _normalizeResidence(residencia),
+      if (direccion != null) 'direccion': direccion,
+      if (papaId != null) 'papa_id': papaId,
+      if (mamaId != null) 'mama_id': mamaId,
+    };
+    final res = await _http.putJson('/api/familias/$id', data: payload);
+    if (res.statusCode >= 400) {
+      throw Exception(parseHttpError(res));
+    }
+    final decoded = jsonDecode(res.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded['data'] is Map
+          ? Map<String, dynamic>.from(decoded['data'])
+          : decoded;
+    }
+    return null;
   }
 }

@@ -48,11 +48,13 @@ class GetFamilyController {
     }).toList();
   }
 
-  void goToDetail(dynamic familia) {
-    Navigator.pushNamed(
+  Future<void> goToDetail(dynamic familia) async {
+    await Navigator.pushNamed(
       context,
       'family_detail',
       arguments: familia['id_familia'],
     );
+    // Recargar siempre al volver para reflejar ediciones, desactivaciones o eliminaciones
+    await loadFamilies();
   }
 }

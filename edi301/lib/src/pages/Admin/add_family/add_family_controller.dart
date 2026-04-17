@@ -5,6 +5,7 @@ import 'package:edi301/services/search_api.dart';
 import 'package:edi301/models/family_model.dart';
 import 'package:edi301/services/familia_api.dart';
 import 'package:edi301/services/members_api.dart';
+import 'package:edi301/core/api_error.dart';
 import 'package:flutter/foundation.dart';
 
 class AddFamilyController {
@@ -275,9 +276,8 @@ class AddFamilyController {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Error al guardar: ${e.toString().replaceFirst('Exception: ', '')}',
-            ),
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
           ),
         );
       }

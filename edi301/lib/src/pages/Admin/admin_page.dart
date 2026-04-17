@@ -74,6 +74,16 @@ class AdminPage extends StatelessWidget {
     ),
   ];
 
+  // Card de Gestionar Admins (ancho completo, debajo del grid)
+  static const _adminCard = _AdminItem(
+    label: 'Gestionar Administradores',
+    sub: 'Asignar rol de Admin a usuarios',
+    icon: Icons.manage_accounts_rounded,
+    route: 'assign_admin',
+    gradient: [Color(0xFF4A148C), Color(0xFF2E004F)],
+    accent: Color(0xFFCE93D8),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,6 +116,13 @@ class AdminPage extends StatelessWidget {
                     childCount: _grid.length,
                   ),
                 ),
+              ),
+
+              // ── Gestionar Admins ─────────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverToBoxAdapter(
+                    child: _PrimaryCard(item: _adminCard)),
               ),
 
               // ── Bottom row ───────────────────────────────────────────────
