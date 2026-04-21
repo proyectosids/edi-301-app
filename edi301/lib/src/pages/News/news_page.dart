@@ -329,13 +329,20 @@ class _NewsPageState extends State<NewsPage> {
     return '${ApiHttp.baseUrl}$path';
   }
 
+  /// Parsea un timestamp del servidor como UTC y lo convierte a hora local.
+  /// El backend puede devolver strings con o sin "Z"; si no tiene indicador
+  /// de zona horaria lo tratamos como UTC para que la conversión sea correcta.
+  static DateTime _parseServerDate(String s) {
+    final str = (s.endsWith('Z') || s.contains('+') || s.contains('-', 11))
+        ? s
+        : '${s}Z';
+    return DateTime.tryParse(str)?.toLocal() ?? DateTime.now();
+  }
+
   String _timeAgo(String? dateStr) {
     if (dateStr == null) return '';
 
-    final parsed = DateTime.tryParse(dateStr);
-    if (parsed == null) return '';
-
-    final date = parsed.toLocal();
+    final date = _parseServerDate(dateStr);
     final diff = DateTime.now().difference(date);
 
     if (diff.inDays > 7) {

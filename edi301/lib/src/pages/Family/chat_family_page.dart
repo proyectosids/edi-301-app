@@ -246,11 +246,20 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
     );
   }
 
+  /// Convierte un timestamp del servidor (con o sin 'Z') a hora local HH:mm.
+  String _formatMsgTime(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    final str = (raw.endsWith('Z') || raw.contains('+') || raw.contains('-', 11))
+        ? raw
+        : '${raw}Z';
+    final dt = DateTime.tryParse(str)?.toLocal();
+    if (dt == null) return '';
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
   Widget _buildMessageBubble(Map<String, dynamic> msg, bool esMio) {
     final baseUrl = ApiHttp.baseUrl;
-    final hora = msg['created_at'] != null
-        ? msg['created_at'].toString().substring(11, 16)
-        : '';
+    final hora = _formatMsgTime(msg['created_at']?.toString());
 
     final colorFondo = esMio
         ? const Color.fromRGBO(19, 67, 107, 1)

@@ -24,6 +24,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
   int? _userId;
   bool _realtimeSetup = false;
 
+  /// Parsea un timestamp del servidor como UTC y devuelve "dd/mm/yyyy HH:mm" local.
+  /// Si no hay indicador de zona horaria lo trata como UTC (producción = UTC).
+  static String _formatServerDate(String? raw, {bool soloFecha = false}) {
+    if (raw == null || raw.isEmpty) return '';
+    final str = (raw.endsWith('Z') || raw.contains('+') || raw.contains('-', 11))
+        ? raw
+        : '${raw}Z';
+    final dt = DateTime.tryParse(str)?.toLocal();
+    if (dt == null) return raw.substring(0, raw.length.clamp(0, 10));
+    if (soloFecha) {
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+    }
+    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}  '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -223,7 +239,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             subtitle: Text(item['mensaje'] ?? 'Solicita publicar esto...'),
             trailing: Text(
               item['created_at'] != null
-                  ? item['created_at'].toString().substring(0, 10)
+                  ? _formatServerDate(item['created_at']?.toString(), soloFecha: true)
                   : '',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
@@ -333,7 +349,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             subtitle: Text(item['mensaje'] ?? 'Sin descripción'),
             trailing: Text(
               item['created_at'] != null
-                  ? item['created_at'].toString().substring(0, 10)
+                  ? _formatServerDate(item['created_at']?.toString(), soloFecha: true)
                   : '',
               style: const TextStyle(fontSize: 12),
             ),
