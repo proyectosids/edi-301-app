@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class OtpService {
-  final String _baseUrl = 'https://api-otp.app.syswork.online/api/v1';
+  final String _baseUrl = 'https://api-otp.apps.isdapps.uk/api/v1';
 
-  final String _serviceEmail = 'irving.patricio@ulv.edu.mx';
-  final String _servicePassword = 'irya0904';
+  final String _serviceEmail = 'waldir.ozuna@ulv.edu.mx';
+  final String _servicePassword = 'wozuna123456.';
 
   Future<String> _authenticate() async {
     final url = Uri.parse('$_baseUrl/user/login');
@@ -39,9 +39,7 @@ class OtpService {
   Future<void> sendOtp(String userEmail) async {
     try {
       final token = await _authenticate();
-      final url = Uri.parse(
-        'https://api-otp.app.syswork.online/api/v1/otp_app/',
-      );
+      final url = Uri.parse('$_baseUrl/otp_app/');
 
       print('Enviando OTP a: $userEmail');
 
