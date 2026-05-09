@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:edi301/services/notificaciones_api.dart';
 import 'package:edi301/core/api_error.dart';
 import 'package:edi301/src/pages/Notifications/notifications_page.dart';
+import 'package:edi301/src/pages/Perfil/renovaciones/mis_renovaciones_page.dart';
 
 class NotificacionesHistorialPage extends StatefulWidget {
   const NotificacionesHistorialPage({super.key});
@@ -175,6 +176,11 @@ class _NotificacionesHistorialPageState
         return Icons.comment_rounded;
       case 'ORACION':
         return Icons.self_improvement_rounded;
+      case 'RENOVACION_CICLO':
+      case 'RENOVACION_CICLO_RESPUESTA':
+        return Icons.refresh_rounded;
+      case 'CICLO_CERRADO':
+        return Icons.event_busy_rounded;
       default:
         return Icons.notifications_rounded;
     }
@@ -206,6 +212,11 @@ class _NotificacionesHistorialPageState
         return Colors.blue.shade600;
       case 'ORACION':
         return const Color(0xFF6A1B9A);
+      case 'RENOVACION_CICLO':
+      case 'RENOVACION_CICLO_RESPUESTA':
+        return const Color(0xFF2E7D32);
+      case 'CICLO_CERRADO':
+        return Colors.grey.shade700;
       default:
         return _primary;
     }
@@ -216,16 +227,84 @@ class _NotificacionesHistorialPageState
     await _markRead(item);
     if (!mounted) return;
 
-    switch (item.tipo.toUpperCase()) {
+    final tipo = item.tipo.toUpperCase();
+    final ref = item.idReferencia;
+
+    switch (tipo) {
+      // ── Solicitudes (alta de familia, etc.) ────────────────────────────
       case 'SOLICITUD':
-        // Navegar a la pantalla donde se aprueban/rechazan solicitudes
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const NotificationsPage()),
         );
         break;
+
+      // ── Renovación de ciclo ────────────────────────────────────────────
+      case 'RENOVACION_CICLO':
+      case 'RENOVACION_CICLO_RESPUESTA':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MisRenovacionesPage()),
+        );
+        break;
+
+      // ── Ciclo cerrado: solo informativa ────────────────────────────────
+      case 'CICLO_CERRADO':
+        break;
+
+      // ── Posts (like, comentario, nueva publicación, aprobación) ───────
+      // El id_referencia es el id_post. Lo pasamos como argumento para que
+      // NewsPage pueda (opcionalmente) hacer scroll/highlight al post.
+      case 'LIKE':
+      case 'COMENTARIO':
+      case 'POST_CREADO':
+      case 'PUBLICACION':
+      case 'NUEVA_PUBLICACION':
+      case 'POST_APROBADO':
+      case 'POST_RECHAZADO':
+      case 'POST_DETALLE':
+      case 'CUMPLEANOS':
+      case 'CUMPLEAÑOS':
+        Navigator.pushNamed(
+          context,
+          'news',
+          arguments: ref != null ? {'highlightPostId': ref} : null,
+        );
+        break;
+
+      // ── Mensajes de chat ───────────────────────────────────────────────
+      // Si el id_referencia es id_familia se puede usar para abrir el chat.
+      // Por ahora abrimos la lista de chats; abrir el chat exacto requiere
+      // pasar id_sala + nombreChat (mejora futura).
+      case 'MENSAJE':
+        Navigator.pushNamed(
+          context,
+          'family',
+          arguments: ref != null ? {'openChatForFamilia': ref} : null,
+        );
+        break;
+
+      // ── Eventos / agenda ───────────────────────────────────────────────
+      // El detalle pide el objeto Evento completo, así que abrimos la
+      // pantalla general de agenda y desde ahí el usuario abre el evento.
+      case 'AGENDA':
+      case 'EVENTO':
+        Navigator.pushNamed(context, 'agenda');
+        break;
+
+      // ── Familia ────────────────────────────────────────────────────────
+      case 'FAMILIA_CREADA':
+      case 'ASIGNACION':
+        Navigator.pushNamed(context, 'family');
+        break;
+
+      // ── Recordatorio de oración: solo informativa ──────────────────────
+      case 'ORACION':
+        break;
+
       default:
-        // Para otros tipos solo marca como leído (ya se hizo arriba)
+        // Tipos que no conocemos: no navegamos a ningún lado, solo se
+        // marca como leído (ya se hizo al inicio del método).
         break;
     }
   }

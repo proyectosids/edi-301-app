@@ -13,6 +13,8 @@ import 'package:edi301/tools/media_picker.dart';
 import 'package:edi301/core/api_error.dart';
 import 'package:edi301/services/chat_api.dart';
 import 'package:edi301/src/pages/Chat/chat_page.dart';
+import 'package:edi301/src/pages/Perfil/delete_account/delete_account_page.dart';
+import 'package:edi301/src/pages/Perfil/sessions/sessions_page.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
@@ -302,6 +304,13 @@ class _PerfilPageState extends State<PerfilPage> {
     }
   }
 
+  // ── Eliminar cuenta (navega a la página dedicada con verificación OTP) ──
+  Future<void> _handleDeleteAccount() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DeleteAccountPage()),
+    );
+  }
+
   // ── Estado selector ──────────────────────────────────────────────────────
   void _showEstadoSelector() async {
     if (!_isAlumno || _userId == null) return;
@@ -588,7 +597,100 @@ class _PerfilPageState extends State<PerfilPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+
+                    // Renovación de ciclo (alumno: solicitar / padre: pendientes)
+                    ListTile(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      tileColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.green,
+                        ),
+                      ),
+                      title: const Text(
+                        'Renovación de ciclo',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Renueva tu familia o aprueba solicitudes',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: _primary,
+                      ),
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        'mis_renovaciones',
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Mis dispositivos (sesiones activas)
+                    ListTile(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      tileColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.devices_rounded,
+                          color: _primary,
+                        ),
+                      ),
+                      title: const Text(
+                        'Mis dispositivos',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Ver y gestionar las sesiones activas',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: _primary,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SessionsPage(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
 
                     // Logout button
                     OutlinedButton.icon(
@@ -607,6 +709,32 @@ class _PerfilPageState extends State<PerfilPage> {
                       ),
                       onPressed: _handleLogout,
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Eliminar cuenta — botón discreto, solo texto, sin marco.
+                    Center(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey.shade600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: _handleDeleteAccount,
+                        child: const Text(
+                          'Eliminar mi cuenta',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                   ]),
                 ),
               ),

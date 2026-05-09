@@ -94,6 +94,16 @@ class AdminPage extends StatelessWidget {
     accent: Color(0xFFFF8A80),
   );
 
+  // Card de Renovación de ciclo (ancho completo)
+  static const _renovacionCard = _AdminItem(
+    label: 'Renovación de ciclo',
+    sub: 'Abrir ventana, ver solicitudes y vaciar familias',
+    icon: Icons.refresh_rounded,
+    route: 'renovaciones_admin',
+    gradient: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+    accent: Color(0xFFA5D6A7),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,6 +150,13 @@ class AdminPage extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 sliver: SliverToBoxAdapter(
                     child: _PrimaryCard(item: _alertCard)),
+              ),
+
+              // ── Renovación de ciclo ──────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverToBoxAdapter(
+                    child: _PrimaryCard(item: _renovacionCard)),
               ),
 
               // ── Bottom row ───────────────────────────────────────────────

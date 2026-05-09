@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/token_storage.dart';
@@ -42,9 +43,25 @@ class LoginController {
     loading.value = true;
 
     try {
+      // Identificación del dispositivo para multi-sesión.
+      // Usamos solo dart:io para no agregar dependencias nuevas.
+      final platform = Platform.isIOS
+          ? 'ios'
+          : Platform.isAndroid
+              ? 'android'
+              : Platform.operatingSystem;
+      final deviceInfo =
+          '${Platform.operatingSystem} ${Platform.operatingSystemVersion}'
+              .trim();
+
       final res = await _http.postJson(
         '/api/auth/login',
-        data: {'login': login, 'password': password},
+        data: {
+          'login': login,
+          'password': password,
+          'platform': platform,
+          'device_info': deviceInfo,
+        },
       );
 
       if (res.statusCode == 401 || res.statusCode == 400) {

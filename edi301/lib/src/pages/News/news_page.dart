@@ -47,6 +47,11 @@ class _NewsPageState extends State<NewsPage> {
 
   List<dynamic> _posts = [];
 
+  // Highlight cuando se entra desde una notificación referida a un post.
+  int? _highlightPostId;
+  int? _pulsingPostId;
+  bool _highlightAttempted = false;
+
   GlobalKey _getLikeButtonKey(int postId) {
     return _likeButtonKeys.putIfAbsent(postId, () => GlobalKey());
   }
@@ -65,6 +70,53 @@ class _NewsPageState extends State<NewsPage> {
 
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _controller.init(context);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_highlightPostId != null) return;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map && args['highlightPostId'] != null) {
+      _highlightPostId = (args['highlightPostId'] as num?)?.toInt();
+    }
+  }
+
+  // Después de cargar el feed, intenta scrollear al post indicado en la
+  // notificación y le aplica un "pulso" visual breve para que el usuario
+  // identifique de inmediato cuál es.
+  void _maybeHighlightPost() {
+    if (_highlightAttempted) return;
+    if (_highlightPostId == null) return;
+    if (_posts.isEmpty) return;
+
+    final idx = _posts.indexWhere((p) => p['id_post'] == _highlightPostId);
+    if (idx < 0) return;
+
+    _highlightAttempted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Dar al primer build tiempo para acomodar el ListView.
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted || !_scrollController.hasClients) return;
+
+      // Scroll aproximado al post (la altura promedio de un card es ~450px).
+      const estimatedHeight = 450.0;
+      final bannerOffset = (_isAlumnoRole && !_hasFamiliaAsignada) ? 1 : 0;
+      final target = (idx + bannerOffset) * estimatedHeight;
+      final maxOffset = _scrollController.position.maxScrollExtent;
+      await _scrollController.animateTo(
+        target.clamp(0.0, maxOffset),
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeInOut,
+      );
+
+      if (!mounted) return;
+      // Activa el pulso visual durante ~3 segundos.
+      setState(() => _pulsingPostId = _highlightPostId);
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      setState(() => _pulsingPostId = null);
     });
   }
 
@@ -267,6 +319,8 @@ class _NewsPageState extends State<NewsPage> {
           _currentPage = 2;
           _loading = false;
         });
+        // Si venimos desde una notificación, intenta destacar el post.
+        _maybeHighlightPost();
       }
     } catch (e) {
       print("Error cargando feed: $e");
@@ -856,16 +910,34 @@ class _NewsPageState extends State<NewsPage> {
     final isLiked = post['is_liked'] == 1 || post['is_liked'] == true;
 
     final theme = _resolvePostTheme(post);
+    final isPulsing = post['id_post'] == _pulsingPostId;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      elevation: theme != null ? 6 : 2,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: isPulsing
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66F5BC06),
+                  blurRadius: 18,
+                  spreadRadius: 2,
+                ),
+              ],
+            )
+          : null,
+      child: Card(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      elevation: isPulsing ? 8 : (theme != null ? 6 : 2),
       color: theme?.bgColor ?? Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: theme != null
-            ? BorderSide(color: theme.borderColor, width: 1.5)
-            : BorderSide.none,
+        side: isPulsing
+            ? const BorderSide(color: Color(0xFFF5BC06), width: 3)
+            : (theme != null
+                ? BorderSide(color: theme.borderColor, width: 1.5)
+                : BorderSide.none),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1059,6 +1131,7 @@ class _NewsPageState extends State<NewsPage> {
           ),
         ],
       ),
+    ),
     );
   }
 

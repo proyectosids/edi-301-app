@@ -49,6 +49,54 @@ class UsersApi {
     }
   }
 
+  /// Elimina (desactiva) la cuenta del usuario autenticado.
+  ///
+  /// El backend conserva las relaciones (familia, mensajes, publicaciones)
+  /// y libera el correo, matrícula y núm. empleado para permitir que la
+  /// persona se registre nuevamente con los mismos datos si así lo desea.
+  Future<void> deleteMyAccount() async {
+    final res = await _http.deleteJson('/api/usuarios/me');
+    if (res.statusCode >= 400) {
+      throw Exception(parseHttpError(res));
+    }
+  }
+
+  // ── Multi-dispositivo: gestión de sesiones ─────────────────────────────
+
+  /// Lista las sesiones activas del usuario autenticado.
+  Future<List<Map<String, dynamic>>> listMySessions() async {
+    final res = await _http.getJson('/api/usuarios/me/sesiones');
+    if (res.statusCode >= 400) {
+      throw Exception(parseHttpError(res));
+    }
+    final data = jsonDecode(res.body);
+    if (data is List) {
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return <Map<String, dynamic>>[];
+  }
+
+  /// Cierra una sesión específica del usuario autenticado.
+  Future<void> revokeSession(int idSesion) async {
+    final res = await _http.deleteJson('/api/usuarios/me/sesiones/$idSesion');
+    if (res.statusCode >= 400) {
+      throw Exception(parseHttpError(res));
+    }
+  }
+
+  /// Cierra todas las sesiones del usuario excepto la actual.
+  Future<int> revokeAllOtherSessions() async {
+    final res = await _http.deleteJson('/api/usuarios/me/sesiones');
+    if (res.statusCode >= 400) {
+      throw Exception(parseHttpError(res));
+    }
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map && body['cerradas'] is int) return body['cerradas'] as int;
+    } catch (_) {}
+    return 0;
+  }
+
   Future<List<fm.Family>> familiasByDocumento({
     int? matricula,
     int? numEmpleado,

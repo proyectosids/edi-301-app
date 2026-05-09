@@ -31,6 +31,8 @@ import 'package:edi301/src/pages/Admin/agenda/crear_evento_page.dart';
 import 'package:edi301/src/pages/Admin/reportes/reportes_page.dart';
 import 'package:edi301/src/pages/Admin/assign_admin_page.dart';
 import 'package:edi301/src/pages/Admin/broadcast/broadcast_page.dart';
+import 'package:edi301/src/pages/Admin/renovaciones/renovaciones_admin_page.dart';
+import 'package:edi301/src/pages/Perfil/renovaciones/mis_renovaciones_page.dart';
 import 'package:edi301/services/socket_service.dart';
 import 'package:edi301/services/users_api.dart';
 
@@ -233,6 +235,8 @@ class MyApp extends StatelessWidget {
         'forgot_password': (BuildContext context) => const ForgotPasswordPage(),
         'assign_admin': (context) => const AssignAdminPage(),
         'broadcast': (context) => const BroadcastPage(),
+        'renovaciones_admin': (context) => const RenovacionesAdminPage(),
+        'mis_renovaciones': (context) => const MisRenovacionesPage(),
       },
     );
   }
