@@ -22,6 +22,8 @@ import 'package:edi301/src/pages/Admin/admin_page.dart';
 import 'package:edi301/src/pages/Perfil/perfil_page.dart';
 import 'package:edi301/src/pages/Family/Edit/edit_page.dart';
 import 'package:edi301/src/pages/Admin/add_family/add_family_page.dart';
+import 'package:edi301/src/pages/Admin/add_family/add_family_manual_page.dart';
+import 'package:edi301/src/pages/Admin/familias_pendientes/familias_pendientes_page.dart';
 import 'package:edi301/src/pages/Admin/add_alumns/add_alumns_page.dart';
 import 'package:edi301/src/pages/Admin/get_family/get_family_page.dart';
 import 'package:edi301/src/pages/Admin/family_detail/Family_detail_page.dart';
@@ -32,6 +34,7 @@ import 'package:edi301/src/pages/Admin/reportes/reportes_page.dart';
 import 'package:edi301/src/pages/Admin/assign_admin_page.dart';
 import 'package:edi301/src/pages/Admin/broadcast/broadcast_page.dart';
 import 'package:edi301/src/pages/Admin/renovaciones/renovaciones_admin_page.dart';
+import 'package:edi301/src/pages/Admin/configuracion/limite_hijos_edi_page.dart';
 import 'package:edi301/src/pages/Perfil/renovaciones/mis_renovaciones_page.dart';
 import 'package:edi301/services/socket_service.dart';
 import 'package:edi301/services/users_api.dart';
@@ -214,6 +217,8 @@ class MyApp extends StatelessWidget {
         'admin': (context) => const AdminPage(),
         'perfil': (context) => const PerfilPage(),
         'add_family': (context) => const AddFamilyPage(),
+        'add_family_manual': (context) => const AddFamilyManualPage(),
+        'familias_pendientes': (context) => const FamiliasPendientesPage(),
         'add_alumns': (context) => const AddAlumnsPage(),
         'get_family': (context) => const GetFamilyPage(),
         'family_detail': (_) => const FamilyDetailPage(),
@@ -236,6 +241,7 @@ class MyApp extends StatelessWidget {
         'assign_admin': (context) => const AssignAdminPage(),
         'broadcast': (context) => const BroadcastPage(),
         'renovaciones_admin': (context) => const RenovacionesAdminPage(),
+        'limite_hijos_edi': (context) => const LimiteHijosEdiPage(),
         'mis_renovaciones': (context) => const MisRenovacionesPage(),
       },
     );

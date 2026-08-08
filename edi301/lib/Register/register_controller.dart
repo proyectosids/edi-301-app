@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edi301/models/institutional_user.dart';
 import 'package:edi301/core/api_client_http.dart';
 import 'package:edi301/core/api_error.dart';
@@ -272,6 +273,37 @@ class RegisterController {
       }
       if (res.statusCode >= 400) {
         throw Exception(parseHttpError(res));
+      }
+
+      // ── Procesar familia_candidatos (familias manuales con padres pendientes) ─
+      // El backend devuelve un array de candidatos si el usuario es PapaEDI/MamaEDI
+      // y su nombre+apellido matchea con alguna familia creada manualmente.
+      // Lo persistimos en SharedPreferences para que el LoginController muestre
+      // el modal "Elige tu familia" tras el primer login.
+      try {
+        final body = jsonDecode(res.body);
+        Map<String, dynamic>? data;
+        if (body is Map<String, dynamic>) {
+          data = body['data'] is Map<String, dynamic>
+              ? Map<String, dynamic>.from(body['data'])
+              : Map<String, dynamic>.from(body);
+        }
+        final candidatos = data?['familia_candidatos'];
+        if (candidatos is List && candidatos.isNotEmpty) {
+          final idNuevoUsuario = data?['id_usuario'] ?? data?['IdUsuario'];
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+            'pending_family_match',
+            jsonEncode({
+              'id_usuario': idNuevoUsuario,
+              'correo': user.correoInstitucional,
+              'candidatos': candidatos,
+            }),
+          );
+        }
+      } catch (e) {
+        // No bloquear el registro si esto falla
+        print('No se pudieron procesar familia_candidatos: $e');
       }
 
       _snack('Registro exitoso. Ahora puedes iniciar sesión.', isError: false);

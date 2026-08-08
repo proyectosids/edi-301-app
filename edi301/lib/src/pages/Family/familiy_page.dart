@@ -42,6 +42,12 @@ class _FamilyPageState extends State<FamiliyPage> {
 
   Timer? _unreadTimer;
 
+  int _asInt(dynamic value, {int fallback = 7}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? fallback;
+  }
+
   Offset _clampOffset(Offset o, Size size) {
     // tamaño aprox del botón (FAB 56 + margen)
     const double fabSize = 56;
@@ -83,7 +89,8 @@ class _FamilyPageState extends State<FamiliyPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastRead =
-          prefs.getString('familia_leido_$idFamilia') ?? '1900-01-01T00:00:00.000Z';
+          prefs.getString('familia_leido_$idFamilia') ??
+          '1900-01-01T00:00:00.000Z';
       final count = await MensajesApi().getUnreadCount(idFamilia, lastRead);
       ChatFamilyPage.familyUnread.value = count;
     } catch (_) {}
@@ -218,7 +225,8 @@ class _FamilyPageState extends State<FamiliyPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        final int numAlumnos = familia['num_alumnos'] ?? 0;
+        final numAlumnos = _asInt(familia['num_alumnos'], fallback: 0);
+        final limiteHijosEdi = _asInt(familia['limite_hijos_edi']);
 
         return Padding(
           padding: const EdgeInsets.all(24.0),
@@ -252,7 +260,9 @@ class _FamilyPageState extends State<FamiliyPage> {
                 children: [
                   const Icon(Icons.people, size: 20, color: Colors.grey),
                   const SizedBox(width: 8),
-                  Text("Capacidad actual: $numAlumnos de 10 alumnos"),
+                  Text(
+                    'Capacidad actual: $numAlumnos de $limiteHijosEdi alumnos',
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -341,8 +351,9 @@ class _FamilyPageState extends State<FamiliyPage> {
                       final coverAbs = _absUrl(coverUrlRaw);
                       final profileAbs = _absUrl(profileUrlRaw);
 
-                      final ImageProvider? coverImage =
-                          coverAbs.isNotEmpty ? NetworkImage(coverAbs) : null;
+                      final ImageProvider? coverImage = coverAbs.isNotEmpty
+                          ? NetworkImage(coverAbs)
+                          : null;
 
                       final ImageProvider? profileImage = profileAbs.isNotEmpty
                           ? NetworkImage(profileAbs)
@@ -644,8 +655,9 @@ class _FamilyPageState extends State<FamiliyPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemBuilder: (context, index) {
                   final f = familias[index];
-                  final int numAlumnos = f['num_alumnos'] ?? 0;
-                  final bool estaLleno = numAlumnos >= 10;
+                  final numAlumnos = _asInt(f['num_alumnos'], fallback: 0);
+                  final limiteHijosEdi = _asInt(f['limite_hijos_edi']);
+                  final bool estaLleno = numAlumnos >= limiteHijosEdi;
 
                   final portadaRaw = _pickField(f, [
                     'foto_portada_url',
@@ -734,7 +746,7 @@ class _FamilyPageState extends State<FamiliyPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                "Integrantes: $numAlumnos / 10",
+                                'Integrantes: $numAlumnos / $limiteHijosEdi',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey[800],
@@ -941,7 +953,8 @@ class _FamilyPageState extends State<FamiliyPage> {
       DateTime.now().day,
     );
     var next = DateTime(today.year, birth.month, birth.day);
-    if (next.isBefore(today)) next = DateTime(today.year + 1, birth.month, birth.day);
+    if (next.isBefore(today))
+      next = DateTime(today.year + 1, birth.month, birth.day);
     return next.difference(today).inDays;
   }
 
@@ -959,8 +972,19 @@ class _FamilyPageState extends State<FamiliyPage> {
 
   static String _formatBirthDate(DateTime d) {
     const meses = [
-      '', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+      '',
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
     ];
     return '${d.day} de ${meses[d.month]}';
   }
@@ -1029,13 +1053,7 @@ class _FamilyPageState extends State<FamiliyPage> {
     // Niños del hogar sin cuenta
     for (final h in family.hogarChildren) {
       if (h.fechaNacimiento != null) {
-        add(
-          h.fullName,
-          h.fechaNacimiento,
-          null,
-          'Niño',
-          null,
-        );
+        add(h.fullName, h.fechaNacimiento, null, 'Niño', null);
       }
     }
 
@@ -1072,8 +1090,12 @@ class _FamilyPageState extends State<FamiliyPage> {
     final hoy = entries.where((e) => e.daysUntil == 0).toList();
 
     // ── Grupos ───────────────────────────────────────────────────────────────
-    final estaS = entries.where((e) => e.daysUntil > 0 && e.daysUntil <= 7).toList();
-    final esteMes = entries.where((e) => e.daysUntil > 7 && e.daysUntil <= 30).toList();
+    final estaS = entries
+        .where((e) => e.daysUntil > 0 && e.daysUntil <= 7)
+        .toList();
+    final esteMes = entries
+        .where((e) => e.daysUntil > 7 && e.daysUntil <= 30)
+        .toList();
     final masAdelante = entries.where((e) => e.daysUntil > 30).toList();
 
     return Column(
@@ -1154,10 +1176,7 @@ class _FamilyPageState extends State<FamiliyPage> {
                 ),
                 Text(
                   'Cumple ${e.nextAge} años hoy 🥳',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.brown.shade600,
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.brown.shade600),
                 ),
               ],
             ),
@@ -1243,10 +1262,7 @@ class _FamilyPageState extends State<FamiliyPage> {
                   const SizedBox(height: 2),
                   Text(
                     '🎂  ${_formatBirthDate(e.birthDate)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                   ),
                   Text(
                     'Cumple ${e.nextAge} años',
@@ -1537,8 +1553,9 @@ class ProfileCard extends StatelessWidget {
     final bool hasValidImage =
         imageUrl.isNotEmpty && !imageUrl.contains('null');
 
-    final ImageProvider? imgProvider =
-        hasValidImage ? NetworkImage(imageUrl) : null;
+    final ImageProvider? imgProvider = hasValidImage
+        ? NetworkImage(imageUrl)
+        : null;
 
     return Card(
       elevation: 1.5,

@@ -7,6 +7,7 @@ import '../core/api_client_http.dart';
 import '../core/api_error.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:edi301/services/users_api.dart';
+import 'package:edi301/src/pages/Family/family_match_modal.dart';
 
 class LoginController {
   final emailCtrl = TextEditingController();
@@ -138,11 +139,57 @@ class LoginController {
 
       if (!_ctx.mounted) return;
       FocusScope.of(_ctx).unfocus();
+
+      // ── Modal "Elige tu familia" (familias manuales pendientes) ──────────
+      // Si el registro previo dejó candidatos pendientes en SharedPreferences,
+      // los mostramos ahora — el usuario ya está autenticado.
+      await _maybeShowFamilyMatch(prefs, idUsuario);
+
+      if (!_ctx.mounted) return;
       Navigator.of(_ctx).pushNamedAndRemoveUntil(route, (_) => false);
     } catch (e) {
       _snack(friendlyError(e));
     } finally {
       loading.value = false;
+    }
+  }
+
+  /// Muestra el modal "Elige tu familia" si el registro previo dejó
+  /// candidatos pendientes en SharedPreferences. Borra la marca tras mostrar
+  /// el modal (independientemente de si el usuario eligió o saltó).
+  Future<void> _maybeShowFamilyMatch(SharedPreferences prefs, dynamic idUsuario) async {
+    final raw = prefs.getString('pending_family_match');
+    if (raw == null || raw.isEmpty) return;
+
+    try {
+      final parsed = jsonDecode(raw);
+      if (parsed is! Map) return;
+
+      // Aseguramos que es el mismo usuario que acaba de registrarse
+      final pendienteId = parsed['id_usuario'];
+      if (pendienteId != null && idUsuario != null &&
+          pendienteId.toString() != idUsuario.toString()) {
+        return; // No coincide → no mostrar (otra cuenta)
+      }
+
+      final list = parsed['candidatos'];
+      if (list is! List || list.isEmpty) return;
+
+      final candidatos = list
+          .whereType<Map>()
+          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      if (!_ctx.mounted) return;
+      final realId = int.tryParse((idUsuario ?? pendienteId).toString()) ?? 0;
+      if (realId <= 0) return;
+
+      await FamilyMatchModal.show(_ctx, idUsuario: realId, candidatos: candidatos);
+    } catch (e) {
+      print('Error mostrando family match modal: $e');
+    } finally {
+      // Limpiar para que no vuelva a aparecer en futuros logins
+      await prefs.remove('pending_family_match');
     }
   }
 

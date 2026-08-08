@@ -48,8 +48,11 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('No se pudieron cargar las familias inactivas. ${friendlyError(e)}'),
-              backgroundColor: Colors.red),
+            content: Text(
+              'No se pudieron cargar las familias inactivas. ${friendlyError(e)}',
+            ),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -64,8 +67,9 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
         _filteredInactive = q.isEmpty
             ? _inactiveFamilies
             : _inactiveFamilies.where((f) {
-                final nombre =
-                    (f['nombre_familia'] ?? '').toString().toLowerCase();
+                final nombre = (f['nombre_familia'] ?? '')
+                    .toString()
+                    .toLowerCase();
                 final padres = (f['padres'] ?? '').toString().toLowerCase();
                 return nombre.contains(q) || padres.contains(q);
               }).toList();
@@ -87,11 +91,14 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
         content: Text('La familia "$nombre" volverá a estar activa y visible.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green, foregroundColor: Colors.white),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Reactivar'),
           ),
@@ -109,14 +116,17 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('✅ "$nombre" reactivada correctamente.'),
-            backgroundColor: Colors.green),
+          content: Text('✅ "$nombre" reactivada correctamente.'),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
         );
       }
     }
@@ -128,10 +138,19 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
     if (s.startsWith('http')) return s;
     s = s.replaceAll('\\', '/');
     final idxPublic = s.indexOf('public/uploads/');
-    if (idxPublic != -1) s = s.substring(idxPublic + 'public'.length);
-    else if (s.startsWith('uploads/')) s = '/$s';
-    else if (!s.startsWith('/')) s = '/$s';
+    if (idxPublic != -1)
+      s = s.substring(idxPublic + 'public'.length);
+    else if (s.startsWith('uploads/'))
+      s = '/$s';
+    else if (!s.startsWith('/'))
+      s = '/$s';
     return '${ApiHttp.baseUrl}$s';
+  }
+
+  int _asInt(dynamic value, {int fallback = 7}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? fallback;
   }
 
   @override
@@ -159,16 +178,17 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                       decoration: InputDecoration(
                         hintText: 'Buscar por apellido o padres...',
                         hintStyle: TextStyle(color: Colors.grey[600]),
-                        prefixIcon:
-                            const Icon(Icons.search, color: Colors.grey),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.grey,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 0),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -243,11 +263,16 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.family_restroom_outlined,
-                              size: 60, color: Colors.grey),
+                          Icon(
+                            Icons.family_restroom_outlined,
+                            size: 60,
+                            color: Colors.grey,
+                          ),
                           SizedBox(height: 10),
-                          Text('No se encontraron familias',
-                              style: TextStyle(color: Colors.grey)),
+                          Text(
+                            'No se encontraron familias',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ],
                       ),
                     ),
@@ -297,10 +322,12 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
 
   // ── Card familia activa ───────────────────────────────────────────────────
   Widget _buildFamilyCard(dynamic f) {
-    final int numAlumnos = f['num_alumnos'] ?? 0;
-    final bool estaLleno = numAlumnos >= 10;
+    final numAlumnos = _asInt(f['num_alumnos'], fallback: 0);
+    final limiteHijosEdi = _asInt(f['limite_hijos_edi']);
+    final bool estaLleno = numAlumnos >= limiteHijosEdi;
     final portadaAbs = _absUrl(
-        (f['portada'] ?? f['foto_portada_url'] ?? '').toString());
+      (f['portada'] ?? f['foto_portada_url'] ?? '').toString(),
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 20),
@@ -317,16 +344,26 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                   height: 150,
                   width: double.infinity,
                   child: portadaAbs.isNotEmpty
-                      ? Image.network(portadaAbs,
+                      ? Image.network(
+                          portadaAbs,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.broken_image,
-                                  color: Colors.grey, size: 50)))
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: Colors.grey,
+                              size: 50,
+                            ),
+                          ),
+                        )
                       : Container(
                           color: const Color.fromRGBO(19, 67, 107, 0.2),
-                          child: const Icon(Icons.image_not_supported,
-                              color: Colors.grey, size: 50)),
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey,
+                            size: 50,
+                          ),
+                        ),
                 ),
                 if (estaLleno)
                   Container(
@@ -335,14 +372,20 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                     child: Center(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(20)),
-                        child: const Text('CASA LLENA',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'CASA LLENA',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -360,16 +403,19 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                         child: Text(
                           (f['nombre_familia'] ?? 'Sin Nombre').toString(),
                           style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: _navy),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _navy,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: estaLleno
                               ? Colors.red[100]
@@ -378,18 +424,21 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.person,
-                                size: 16,
-                                color: estaLleno
-                                    ? Colors.red
-                                    : Colors.green),
+                            Icon(
+                              Icons.person,
+                              size: 16,
+                              color: estaLleno ? Colors.red : Colors.green,
+                            ),
                             const SizedBox(width: 4),
-                            Text('$numAlumnos / 10',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: estaLleno
-                                        ? Colors.red[800]
-                                        : Colors.green[800])),
+                            Text(
+                              '$numAlumnos / $limiteHijosEdi',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: estaLleno
+                                    ? Colors.red[800]
+                                    : Colors.green[800],
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -399,16 +448,21 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.people_outline,
-                          size: 18, color: Colors.grey),
+                      const Icon(
+                        Icons.people_outline,
+                        size: 18,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           unescape.convert(
-                              (f['padres'] ?? 'Sin padres asignados')
-                                  .toString()),
+                            (f['padres'] ?? 'Sin padres asignados').toString(),
+                          ),
                           style: TextStyle(
-                              color: Colors.grey[800], fontSize: 13),
+                            color: Colors.grey[800],
+                            fontSize: 13,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -431,9 +485,10 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                            color: Colors.grey[600]),
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
                   ],
@@ -449,7 +504,8 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
   // ── Card familia inactiva ─────────────────────────────────────────────────
   Widget _buildInactiveFamilyCard(dynamic f) {
     final portadaAbs = _absUrl(
-        (f['portada'] ?? f['foto_portada_url'] ?? '').toString());
+      (f['portada'] ?? f['foto_portada_url'] ?? '').toString(),
+    );
     final numMiembros = f['num_miembros'] ?? 0;
 
     return Card(
@@ -468,18 +524,30 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                 width: double.infinity,
                 child: ColorFiltered(
                   colorFilter: const ColorFilter.mode(
-                      Colors.grey, BlendMode.saturation),
+                    Colors.grey,
+                    BlendMode.saturation,
+                  ),
                   child: portadaAbs.isNotEmpty
-                      ? Image.network(portadaAbs,
+                      ? Image.network(
+                          portadaAbs,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.broken_image,
-                                  color: Colors.grey, size: 40)))
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          ),
+                        )
                       : Container(
                           color: Colors.grey[300],
-                          child: const Icon(Icons.image_not_supported,
-                              color: Colors.grey, size: 40)),
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
+                        ),
                 ),
               ),
               Container(
@@ -488,15 +556,21 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                 child: Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                        color: Colors.orange,
-                        borderRadius: BorderRadius.circular(20)),
-                    child: const Text('INACTIVA',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'INACTIVA',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -513,24 +587,31 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                       Text(
                         (f['nombre_familia'] ?? 'Sin Nombre').toString(),
                         style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.people_outline,
-                              size: 14, color: Colors.grey),
+                          const Icon(
+                            Icons.people_outline,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               unescape.convert(
-                                  (f['padres'] ?? 'Sin padres').toString()),
+                                (f['padres'] ?? 'Sin padres').toString(),
+                              ),
                               style: const TextStyle(
-                                  fontSize: 12, color: Colors.grey),
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -539,9 +620,13 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                       ),
                       if (numMiembros > 0) ...[
                         const SizedBox(height: 2),
-                        Text('$numMiembros miembro(s)',
-                            style: const TextStyle(
-                                fontSize: 11, color: Colors.grey)),
+                        Text(
+                          '$numMiembros miembro(s)',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -549,15 +634,20 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.restore, size: 16),
-                  label: const Text('Reactivar',
-                      style: TextStyle(fontSize: 12)),
+                  label: const Text(
+                    'Reactivar',
+                    style: TextStyle(fontSize: 12),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () => _reactivate(f),
                 ),
@@ -593,8 +683,7 @@ class _ToggleChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? color : Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(20),
@@ -605,11 +694,13 @@ class _ToggleChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 15,
-                color: selected
-                    ? (selectedColor != null ? Colors.white : Colors.black87)
-                    : Colors.white),
+            Icon(
+              icon,
+              size: 15,
+              color: selected
+                  ? (selectedColor != null ? Colors.white : Colors.black87)
+                  : Colors.white,
+            ),
             const SizedBox(width: 5),
             Text(
               label,

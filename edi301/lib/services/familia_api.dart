@@ -256,6 +256,92 @@ class FamiliaApi {
     if (res.statusCode >= 400) throw Exception(parseHttpError(res));
   }
 
+  // ── Familia manual ────────────────────────────────────────────────────────
+  /// Crea una familia sin que los padres estén registrados (los nombres se
+  /// guardan en columnas pendientes). Devuelve la familia creada.
+  /// Debe enviarse al menos uno: papá o mamá.
+  Future<Map<String, dynamic>> createFamilyManual({
+    String? papaNombre,
+    String? papaApellido,
+    String? mamaNombre,
+    String? mamaApellido,
+    required String residencia,
+    String? direccion,
+    String? descripcion,
+    String? nombreFamilia,
+  }) async {
+    final payload = <String, dynamic>{
+      'residencia': _normalizeResidence(residencia),
+      if (papaNombre   != null && papaNombre.trim().isNotEmpty)   'papa_nombre':   papaNombre.trim(),
+      if (papaApellido != null && papaApellido.trim().isNotEmpty) 'papa_apellido': papaApellido.trim(),
+      if (mamaNombre   != null && mamaNombre.trim().isNotEmpty)   'mama_nombre':   mamaNombre.trim(),
+      if (mamaApellido != null && mamaApellido.trim().isNotEmpty) 'mama_apellido': mamaApellido.trim(),
+      if (direccion    != null && direccion.trim().isNotEmpty)    'direccion':     direccion.trim(),
+      if (descripcion  != null && descripcion.trim().isNotEmpty)  'descripcion':   descripcion.trim(),
+      if (nombreFamilia != null && nombreFamilia.trim().isNotEmpty) 'nombre_familia': nombreFamilia.trim(),
+    };
+    final res = await _http.postJson('/api/familias/manual', data: payload);
+    debugPrint('POST /api/familias/manual -> ${res.statusCode} :: ${res.body}');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded['data'] is Map
+          ? Map<String, dynamic>.from(decoded['data'])
+          : decoded;
+    }
+    throw Exception('Respuesta inválida del servidor al crear familia manual.');
+  }
+
+  /// Devuelve las familias activas con slot PAPA/MAMA pendiente que matcheen
+  /// el nombre+apellido del usuario indicado.
+  Future<List<Map<String, dynamic>>> getCandidatesForUser(int idUsuario) async {
+    final res = await _http.getJson('/api/familias/candidatos/$idUsuario');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+    final decoded = jsonDecode(res.body);
+    final list = decoded is Map && decoded['data'] is List
+        ? decoded['data'] as List
+        : (decoded is List ? decoded : <dynamic>[]);
+    return list
+        .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  /// Vincula un usuario al slot PAPA o MAMA de una familia pendiente.
+  /// [rol] debe ser 'PAPA' o 'MAMA'.
+  Future<Map<String, dynamic>> linkUserToFamily({
+    required int idFamilia,
+    required int idUsuario,
+    required String rol,
+  }) async {
+    final res = await _http.postJson(
+      '/api/familias/$idFamilia/vincular',
+      data: {'id_usuario': idUsuario, 'rol': rol},
+    );
+    debugPrint('POST /api/familias/$idFamilia/vincular -> ${res.statusCode} :: ${res.body}');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+    final decoded = jsonDecode(res.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded['data'] is Map
+          ? Map<String, dynamic>.from(decoded['data'])
+          : decoded;
+    }
+    throw Exception('Respuesta inválida del servidor al vincular usuario.');
+  }
+
+  /// Lista todas las familias con padres pendientes de vincular (panel admin).
+  Future<List<Map<String, dynamic>>> getFamiliasPendientes() async {
+    final res = await _http.getJson('/api/familias/pendientes');
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+    final decoded = jsonDecode(res.body);
+    final list = decoded is Map && decoded['data'] is List
+        ? decoded['data'] as List
+        : (decoded is List ? decoded : <dynamic>[]);
+    return list
+        .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
   /// Edita campos de una familia (padre, madre, nombre, residencia, hijos)
   Future<Map<String, dynamic>?> updateFamily({
     required int id,

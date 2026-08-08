@@ -35,6 +35,13 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       appBar: AppBar(
         title: const Text('Crear familia'),
         backgroundColor: primary,
+        actions: [
+          IconButton(
+            tooltip: 'Modo manual (sin usuarios registrados)',
+            icon: const Icon(Icons.edit_note),
+            onPressed: () => Navigator.of(context).pushNamed('add_family_manual'),
+          ),
+        ],
       ),
       body: SafeArea(
         child: ResponsiveContent(

@@ -104,6 +104,15 @@ class AdminPage extends StatelessWidget {
     accent: Color(0xFFA5D6A7),
   );
 
+  static const _limiteHijosCard = _AdminItem(
+    label: 'Límite de hijos EDI',
+    sub: 'Máximo global por familia',
+    icon: Icons.groups_rounded,
+    route: 'limite_hijos_edi',
+    gradient: [Color(0xFF00695C), Color(0xFF004D40)],
+    accent: Color(0xFF80CBC4),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -142,21 +151,31 @@ class AdminPage extends StatelessWidget {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 sliver: SliverToBoxAdapter(
-                    child: _PrimaryCard(item: _adminCard)),
+                  child: _PrimaryCard(item: _adminCard),
+                ),
               ),
 
               // ── Alerta Instantánea ───────────────────────────────────────
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 sliver: SliverToBoxAdapter(
-                    child: _PrimaryCard(item: _alertCard)),
+                  child: _PrimaryCard(item: _alertCard),
+                ),
               ),
 
               // ── Renovación de ciclo ──────────────────────────────────────
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 sliver: SliverToBoxAdapter(
-                    child: _PrimaryCard(item: _renovacionCard)),
+                  child: _PrimaryCard(item: _renovacionCard),
+                ),
+              ),
+
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _PrimaryCard(item: _limiteHijosCard),
+                ),
               ),
 
               // ── Bottom row ───────────────────────────────────────────────
