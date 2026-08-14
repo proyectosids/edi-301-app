@@ -45,6 +45,12 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
   List<Map<String, dynamic>> _hijoResults = [];
   Timer? _hijoDebounce;
 
+  // Tíos EDI (empleados o alumnos; no cuentan como hijos)
+  late List<FamilyMember> _tios;
+  final TextEditingController _tioSearchCtrl = TextEditingController();
+  List<Map<String, dynamic>> _tioResults = [];
+  Timer? _tioDebounce;
+
   // Hijos del hogar sin cuenta
   late List<HogarChild> _hogarChildren;
 
@@ -56,10 +62,9 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
     final f = widget.family;
     _nombreCtrl = TextEditingController(text: f.familyName);
     _direccionCtrl = TextEditingController(text: f.direccion ?? '');
-    _residencia =
-        (f.residencia?.toUpperCase().startsWith('INT') ?? true)
-            ? 'INTERNA'
-            : 'EXTERNA';
+    _residencia = (f.residencia?.toUpperCase().startsWith('INT') ?? true)
+        ? 'INTERNA'
+        : 'EXTERNA';
 
     if (f.fatherEmployeeId != null) {
       _selectedPapa = {
@@ -76,6 +81,7 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
       _mamaSearchCtrl.text = f.motherName ?? '';
     }
     _hijos = List<FamilyMember>.from(f.householdChildren);
+    _tios = List<FamilyMember>.from(f.uncles);
     _hogarChildren = List<HogarChild>.from(f.hogarChildren);
   }
 
@@ -86,15 +92,16 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
     _papaSearchCtrl.dispose();
     _mamaSearchCtrl.dispose();
     _hijoSearchCtrl.dispose();
+    _tioSearchCtrl.dispose();
     _papaDebounce?.cancel();
     _mamaDebounce?.cancel();
     _hijoDebounce?.cancel();
+    _tioDebounce?.cancel();
     super.dispose();
   }
 
   // ── Search helpers ─────────────────────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> _searchUsers(
-      String q, String tipo) async {
+  Future<List<Map<String, dynamic>>> _searchUsers(String q, String tipo) async {
     if (q.trim().isEmpty) return [];
     try {
       final res = await _api.getJson(
@@ -106,8 +113,8 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
       final list = decoded is List
           ? decoded
           : (decoded is Map && decoded['data'] is List)
-              ? decoded['data'] as List
-              : [];
+          ? decoded['data'] as List
+          : [];
       return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (_) {
       return [];
@@ -179,6 +186,34 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
     });
   }
 
+  Future<List<Map<String, dynamic>>> _searchUncles(String q) async {
+    final results = await Future.wait([
+      _searchUsers(q, 'ALUMNO'),
+      _searchUsers(q, 'EMPLEADO'),
+    ]);
+    final merged = <int, Map<String, dynamic>>{};
+    for (final list in results) {
+      for (final user in list) {
+        if (!_tios.any((tio) => tio.idUsuario == _userId(user))) {
+          merged[_userId(user)] = user;
+        }
+      }
+    }
+    return merged.values.toList();
+  }
+
+  void _onTioSearch(String q) {
+    _tioDebounce?.cancel();
+    if (q.trim().isEmpty) {
+      setState(() => _tioResults = []);
+      return;
+    }
+    _tioDebounce = Timer(const Duration(milliseconds: 400), () async {
+      final results = await _searchUncles(q);
+      if (mounted) setState(() => _tioResults = results);
+    });
+  }
+
   // ── Add / remove hijo ───────────────────────────────────────────────────────
   Future<void> _addHijo(Map<String, dynamic> user) async {
     final id = _userId(user);
@@ -192,23 +227,32 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
       final nombre = _userName(user);
       if (mounted) {
         setState(() {
-          _hijos.add(FamilyMember(
-            idMiembro: 0,
-            idUsuario: id,
-            fullName: nombre,
-            tipoMiembro: 'HIJO',
-          ));
+          _hijos.add(
+            FamilyMember(
+              idMiembro: 0,
+              idUsuario: id,
+              fullName: nombre,
+              tipoMiembro: 'HIJO',
+            ),
+          );
           _hijoSearchCtrl.clear();
           _hijoResults = [];
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text('$nombre agregado.'),
-            backgroundColor: Colors.green));
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
       }
     }
   }
@@ -221,8 +265,9 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
         content: Text('¿Quitar a ${m.fullName} de la familia?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -236,15 +281,79 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
       if (m.idMiembro != 0) await _membersApi.removeMember(m.idMiembro);
       setState(() => _hijos.removeWhere((h) => h.idUsuario == m.idUsuario));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
             content: Text('Quitado correctamente.'),
-            backgroundColor: Colors.orange));
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
       }
+    }
+  }
+
+  Future<void> _addTio(Map<String, dynamic> user) async {
+    final id = _userId(user);
+    if (_tios.any((tio) => tio.idUsuario == id)) return;
+    try {
+      await _membersApi.addMember(
+        idFamilia: widget.family.id!,
+        idUsuario: id,
+        tipoMiembro: 'TIO_EDI',
+      );
+      if (mounted) {
+        setState(() {
+          _tios.add(
+            FamilyMember(
+              idMiembro: 0,
+              idUsuario: id,
+              fullName: _userName(user),
+              tipoMiembro: 'TIO_EDI',
+            ),
+          );
+          _tioSearchCtrl.clear();
+          _tioResults = [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tío EDI agregado.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+    }
+  }
+
+  Future<void> _removeTio(FamilyMember tio) async {
+    if (tio.idMiembro == 0) return;
+    try {
+      await _membersApi.removeMember(tio.idMiembro);
+      if (mounted)
+        setState(() => _tios.removeWhere((x) => x.idUsuario == tio.idUsuario));
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
     }
   }
 
@@ -267,9 +376,12 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text(friendlyError(e)),
-            backgroundColor: Colors.red.shade700));
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -292,7 +404,9 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   ),
                 )
               : IconButton(
@@ -322,13 +436,15 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
             SegmentedButton<String>(
               segments: const [
                 ButtonSegment(
-                    value: 'INTERNA',
-                    label: Text('Interna'),
-                    icon: Icon(Icons.home)),
+                  value: 'INTERNA',
+                  label: Text('Interna'),
+                  icon: Icon(Icons.home),
+                ),
                 ButtonSegment(
-                    value: 'EXTERNA',
-                    label: Text('Externa'),
-                    icon: Icon(Icons.directions_walk)),
+                  value: 'EXTERNA',
+                  label: Text('Externa'),
+                  icon: Icon(Icons.directions_walk),
+                ),
               ],
               selected: {_residencia},
               onSelectionChanged: (s) {
@@ -420,12 +536,15 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                   child: ListTile(
                     dense: true,
                     leading: const CircleAvatar(
-                        radius: 16,
-                        child: Icon(Icons.child_care, size: 16)),
+                      radius: 16,
+                      child: Icon(Icons.child_care, size: 16),
+                    ),
                     title: Text(h.fullName),
                     trailing: IconButton(
-                      icon: const Icon(Icons.remove_circle_outline,
-                          color: Colors.red),
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red,
+                      ),
                       onPressed: () => _removeHijo(h),
                     ),
                   ),
@@ -436,7 +555,9 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
               controller: _hijoSearchCtrl,
               onChanged: _onHijoSearch,
               decoration: _inputDeco(
-                  'Agregar hijo por nombre o matrícula', Icons.person_add),
+                'Agregar hijo por nombre o matrícula',
+                Icons.person_add,
+              ),
             ),
             if (_hijoResults.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -449,20 +570,89 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                     itemCount: _hijoResults.length,
                     itemBuilder: (_, i) {
                       final u = _hijoResults[i];
-                      final mat =
-                          u['Matricula'] ?? u['matricula'];
+                      final mat = u['Matricula'] ?? u['matricula'];
                       return ListTile(
                         dense: true,
                         leading: const Icon(Icons.school),
                         title: Text(_userName(u)),
                         subtitle: mat != null
-                            ? Text('Matrícula: $mat',
-                                style: const TextStyle(fontSize: 11))
+                            ? Text(
+                                'Matrícula: $mat',
+                                style: const TextStyle(fontSize: 11),
+                              )
                             : null,
                         trailing: IconButton(
-                          icon: const Icon(Icons.add_circle_outline,
-                              color: Colors.green),
+                          icon: const Icon(
+                            Icons.add_circle_outline,
+                            color: Colors.green,
+                          ),
                           onPressed: () => _addHijo(u),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+
+            // ── Tíos EDI ────────────────────────────────────────────────────
+            _sectionTitle('Tíos EDI'),
+            Text(
+              'Alumnos o empleados que apoyan a la familia. No ocupan cupo de hijos.',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 8),
+            if (_tios.isNotEmpty)
+              ..._tios.map(
+                (tio) => Card(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  child: ListTile(
+                    dense: true,
+                    leading: const CircleAvatar(
+                      radius: 16,
+                      child: Icon(Icons.family_restroom, size: 16),
+                    ),
+                    title: Text(tio.fullName),
+                    trailing: IconButton(
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red,
+                      ),
+                      onPressed: () => _removeTio(tio),
+                    ),
+                  ),
+                ),
+              ),
+            TextField(
+              controller: _tioSearchCtrl,
+              onChanged: _onTioSearch,
+              decoration: _inputDeco(
+                'Agregar tío por nombre, matrícula o No. empleado',
+                Icons.person_add,
+              ),
+            ),
+            if (_tioResults.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Card(
+                elevation: 3,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _tioResults.length,
+                    itemBuilder: (_, i) {
+                      final user = _tioResults[i];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.person),
+                        title: Text(_userName(user)),
+                        trailing: IconButton(
+                          icon: const Icon(
+                            Icons.add_circle_outline,
+                            color: Colors.green,
+                          ),
+                          onPressed: () => _addTio(user),
                         ),
                       );
                     },
@@ -500,19 +690,26 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                     leading: const CircleAvatar(
                       radius: 16,
                       backgroundColor: Color(0xFFD6EAF8),
-                      child: Icon(Icons.child_care,
-                          size: 16, color: _navy),
+                      child: Icon(Icons.child_care, size: 16, color: _navy),
                     ),
-                    title: Text(h.fullName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13)),
+                    title: Text(
+                      h.fullName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
                     subtitle: h.fechaNacimiento != null
-                        ? Text('Nac: ${h.fechaNacimiento}',
-                            style: const TextStyle(fontSize: 11))
+                        ? Text(
+                            'Nac: ${h.fechaNacimiento}',
+                            style: const TextStyle(fontSize: 11),
+                          )
                         : null,
                     trailing: IconButton(
-                      icon: const Icon(Icons.remove_circle_outline,
-                          color: Colors.red),
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red,
+                      ),
                       onPressed: () => _removeHogarChild(h),
                     ),
                   ),
@@ -530,7 +727,9 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.save),
                 label: Text(_saving ? 'GUARDANDO...' : 'GUARDAR CAMBIOS'),
@@ -540,7 +739,8 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -552,7 +752,7 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
 
   // ── Hijos del hogar sin cuenta ─────────────────────────────────────────────
   Future<void> _showHogarChildDialog() async {
-    final nombreCtrl   = TextEditingController();
+    final nombreCtrl = TextEditingController();
     final apellidoCtrl = TextEditingController();
     DateTime? selectedDate;
     final formKey = GlobalKey<FormState>();
@@ -562,13 +762,13 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) => AlertDialog(
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18)),
+            borderRadius: BorderRadius.circular(18),
+          ),
           title: const Row(
             children: [
               Icon(Icons.child_care, color: _navy),
               SizedBox(width: 8),
-              Text('Agregar niño sin cuenta',
-                  style: TextStyle(fontSize: 16)),
+              Text('Agregar niño sin cuenta', style: TextStyle(fontSize: 16)),
             ],
           ),
           content: SingleChildScrollView(
@@ -586,9 +786,7 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                     ),
                     textCapitalization: TextCapitalization.words,
                     validator: (v) =>
-                        (v == null || v.trim().isEmpty)
-                            ? 'Requerido'
-                            : null,
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -600,17 +798,16 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                     ),
                     textCapitalization: TextCapitalization.words,
                     validator: (v) =>
-                        (v == null || v.trim().isEmpty)
-                            ? 'Requerido'
-                            : null,
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                   ),
                   const SizedBox(height: 12),
                   InkWell(
                     onTap: () async {
                       final picked = await showDatePicker(
                         context: ctx,
-                        initialDate: DateTime.now()
-                            .subtract(const Duration(days: 365 * 5)),
+                        initialDate: DateTime.now().subtract(
+                          const Duration(days: 365 * 5),
+                        ),
                         firstDate: DateTime(2000),
                         lastDate: DateTime.now(),
                       );
@@ -626,8 +823,7 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                       ),
                       child: Text(
                         selectedDate != null
-                            ? DateFormat('dd/MM/yyyy')
-                                .format(selectedDate!)
+                            ? DateFormat('dd/MM/yyyy').format(selectedDate!)
                             : 'Seleccionar (opcional)',
                         style: TextStyle(
                           color: selectedDate != null
@@ -644,22 +840,25 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancelar',
-                  style: TextStyle(color: Colors.grey.shade600)),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _navy,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
                 Navigator.pop(ctx);
                 await _saveHogarChild(
-                  nombre:          nombreCtrl.text.trim(),
-                  apellido:        apellidoCtrl.text.trim(),
+                  nombre: nombreCtrl.text.trim(),
+                  apellido: apellidoCtrl.text.trim(),
                   fechaNacimiento: selectedDate != null
                       ? DateFormat('yyyy-MM-dd').format(selectedDate!)
                       : null,
@@ -680,22 +879,28 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
   }) async {
     try {
       final created = await _familiaApi.createHogarChild(
-        idFamilia:        widget.family.id!,
-        nombre:           nombre,
-        apellido:         apellido,
-        fechaNacimiento:  fechaNacimiento,
+        idFamilia: widget.family.id!,
+        nombre: nombre,
+        apellido: apellido,
+        fechaNacimiento: fechaNacimiento,
       );
       if (mounted) {
         setState(() => _hogarChildren.add(created));
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text('${created.fullName} agregado.'),
-            backgroundColor: Colors.green));
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text(friendlyError(e)),
-            backgroundColor: Colors.red.shade700));
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
       }
     }
   }
@@ -708,8 +913,9 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
         content: Text('¿Quitar a ${h.fullName} de la familia?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -721,44 +927,53 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
     if (confirmed != true || !mounted) return;
     try {
       if (h.idHijo != null) await _familiaApi.deleteHogarChild(h.idHijo!);
-      setState(() => _hogarChildren.removeWhere(
-          (x) => x.idHijo == h.idHijo && x.fullName == h.fullName));
+      setState(
+        () => _hogarChildren.removeWhere(
+          (x) => x.idHijo == h.idHijo && x.fullName == h.fullName,
+        ),
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
             content: Text('Quitado correctamente.'),
-            backgroundColor: Colors.orange));
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text(friendlyError(e)),
-            backgroundColor: Colors.red.shade700));
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
       }
     }
   }
 
   Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: _navy,
-            letterSpacing: 0.3,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 13,
+        color: _navy,
+        letterSpacing: 0.3,
+      ),
+    ),
+  );
 
   InputDecoration _inputDeco(String label, IconData icon) => InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: _navy),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _navy, width: 2),
-        ),
-      );
+    labelText: label,
+    prefixIcon: Icon(icon, color: _navy),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: _navy, width: 2),
+    ),
+  );
 
   Widget _buildPersonSearch({
     required TextEditingController controller,
@@ -784,8 +999,7 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                     onPressed: onClear,
                   )
                 : null,
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: _navy, width: 2),
@@ -811,8 +1025,10 @@ class _EditFamilyPageState extends State<EditFamilyPage> {
                     leading: const Icon(Icons.person),
                     title: Text(_userName(u)),
                     subtitle: emp != null
-                        ? Text('Empleado: $emp',
-                            style: const TextStyle(fontSize: 11))
+                        ? Text(
+                            'Empleado: $emp',
+                            style: const TextStyle(fontSize: 11),
+                          )
                         : null,
                     onTap: () => onSelect(u),
                   );

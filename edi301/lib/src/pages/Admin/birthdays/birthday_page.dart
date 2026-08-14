@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:edi301/tools/media_picker.dart';
 import 'package:edi301/services/users_api.dart';
 import 'package:edi301/core/api_client_http.dart';
 import 'package:edi301/services/chat_api.dart';
@@ -111,10 +111,8 @@ class _BirthdaysPageState extends State<BirthdaysPage>
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ChatPage(
-            idSala: idSala,
-            nombreChat: u.nombreCompleto,
-          ),
+          builder: (_) =>
+              ChatPage(idSala: idSala, nombreChat: u.nombreCompleto),
         ),
       );
     }
@@ -333,9 +331,7 @@ class _ImagenFelicitacionPageState extends State<_ImagenFelicitacionPage> {
   }
 
   Future<void> _seleccionarImagen() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
+    final picked = await MediaPicker.pickFromGallery(
       imageQuality: 85,
       maxWidth: 1200,
     );
@@ -370,7 +366,10 @@ class _ImagenFelicitacionPageState extends State<_ImagenFelicitacionPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
         );
       }
     } finally {

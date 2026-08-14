@@ -52,6 +52,12 @@ class AddFamilyController {
   final ValueNotifier<List<UserMini>> children = ValueNotifier<List<UserMini>>(
     [],
   );
+  final TextEditingController searchUncleCtrl = TextEditingController();
+  final ValueNotifier<List<UserMini>> uncleResults =
+      ValueNotifier<List<UserMini>>([]);
+  final ValueNotifier<List<UserMini>> uncles = ValueNotifier<List<UserMini>>(
+    [],
+  );
 
   final ValueNotifier<bool> _loading = ValueNotifier<bool>(false);
   ValueListenable<bool> get loading => _loading;
@@ -81,10 +87,13 @@ class AddFamilyController {
     fatherCtrl.dispose();
     motherCtrl.dispose();
     searchChildCtrl.dispose();
+    searchUncleCtrl.dispose();
     fatherResults.dispose();
     motherResults.dispose();
     childResults.dispose();
     children.dispose();
+    uncleResults.dispose();
+    uncles.dispose();
     hogarChildren.dispose();
     _familyName.dispose();
     _internalResidence.dispose();
@@ -139,8 +148,7 @@ class AddFamilyController {
         lower[0] == 'de' &&
         (lower[1] == 'la' || lower[1] == 'los' || lower[1] == 'las')) {
       firstSurnameLength = 3;
-    } else if (parts.length >= 2 &&
-        (lower[0] == 'de' || lower[0] == 'del')) {
+    } else if (parts.length >= 2 && (lower[0] == 'de' || lower[0] == 'del')) {
       firstSurnameLength = 2;
     } else {
       firstSurnameLength = 1;
@@ -236,6 +244,37 @@ class AddFamilyController {
     }
   }
 
+  Future<void> searchUncleByText(String q) async {
+    q = q.trim();
+    if (q.isEmpty) {
+      uncleResults.value = [];
+      return;
+    }
+    final res = await _searchApi.searchAll(q);
+    final matches = <int, UserMini>{};
+    for (final u in [...res.alumnos, ...res.empleados]) {
+      if (!uncles.value.any((selected) => selected.id == u.id))
+        matches[u.id] = u;
+    }
+    uncleResults.value = matches.values.toList();
+  }
+
+  void addUncle(UserMini u) {
+    if (!uncles.value.any((x) => x.id == u.id)) {
+      uncles.value = [...uncles.value, u];
+    }
+    uncleResults.value = [];
+    searchUncleCtrl.clear();
+  }
+
+  void removeUncle(int index) {
+    final list = [...uncles.value];
+    if (index >= 0 && index < list.length) {
+      list.removeAt(index);
+      uncles.value = list;
+    }
+  }
+
   Future<void> save(BuildContext context) async {
     _loading.value = true;
     try {
@@ -263,6 +302,7 @@ class AddFamilyController {
         return;
       }
       final hijosIds = children.value.map((kid) => kid.id).toList();
+      final tiosIds = uncles.value.map((tio) => tio.id).toList();
       final created = await _familiaApi.createFamily(
         nombreFamilia: _familyName.value.trim().isEmpty
             ? 'Familia'
@@ -272,6 +312,7 @@ class AddFamilyController {
         papaId: _pickedFather?.id,
         mamaId: _pickedMother?.id,
         hijos: hijosIds,
+        tios: tiosIds,
       );
 
       // ── Crear hijos del hogar sin cuenta ───────────────────────────────────
@@ -279,10 +320,10 @@ class AddFamilyController {
         for (final draft in hogarChildren.value) {
           try {
             await _familiaApi.createHogarChild(
-              idFamilia:        created.id!,
-              nombre:           draft.nombre,
-              apellido:         draft.apellido,
-              fechaNacimiento:  draft.fechaNacimiento,
+              idFamilia: created.id!,
+              nombre: draft.nombre,
+              apellido: draft.apellido,
+              fechaNacimiento: draft.fechaNacimiento,
             );
           } catch (e) {
             // No cancelar el flujo si uno falla — seguir con los demás
@@ -316,12 +357,14 @@ class AddFamilyController {
       motherCtrl.clear();
       addressCtrl.clear();
       children.value = [];
+      uncles.value = [];
       hogarChildren.value = [];
       _familyName.value = '';
       _internalResidence.value = true;
       fatherResults.value = [];
       motherResults.value = [];
       childResults.value = [];
+      uncleResults.value = [];
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

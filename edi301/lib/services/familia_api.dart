@@ -25,6 +25,7 @@ class FamiliaApi {
     int? papaId,
     int? mamaId,
     List<int>? hijos,
+    List<int>? tios,
   }) async {
     final payload = <String, dynamic>{
       'nombre_familia': nombreFamilia,
@@ -34,6 +35,7 @@ class FamiliaApi {
       if (papaId != null) 'papa_id': papaId,
       if (mamaId != null) 'mama_id': mamaId,
       if (hijos != null && hijos.isNotEmpty) 'hijos': hijos,
+      if (tios != null && tios.isNotEmpty) 'tios': tios,
     };
 
     final res = await _http.postJson('/api/familias', data: payload);
@@ -200,7 +202,8 @@ class FamiliaApi {
     if (res.statusCode >= 400) throw Exception(parseHttpError(res));
     final decoded = jsonDecode(res.body);
     if (decoded is List) return decoded;
-    if (decoded is Map && decoded['data'] is List) return decoded['data'] as List;
+    if (decoded is Map && decoded['data'] is List)
+      return decoded['data'] as List;
     return [];
   }
 
@@ -228,8 +231,8 @@ class FamiliaApi {
   }) async {
     final payload = <String, dynamic>{
       'id_familia': idFamilia,
-      'nombre':     nombre.trim(),
-      'apellido':   apellido.trim(),
+      'nombre': nombre.trim(),
+      'apellido': apellido.trim(),
       if (fechaNacimiento != null && fechaNacimiento.isNotEmpty)
         'fecha_nacimiento': fechaNacimiento,
     };
@@ -272,13 +275,20 @@ class FamiliaApi {
   }) async {
     final payload = <String, dynamic>{
       'residencia': _normalizeResidence(residencia),
-      if (papaNombre   != null && papaNombre.trim().isNotEmpty)   'papa_nombre':   papaNombre.trim(),
-      if (papaApellido != null && papaApellido.trim().isNotEmpty) 'papa_apellido': papaApellido.trim(),
-      if (mamaNombre   != null && mamaNombre.trim().isNotEmpty)   'mama_nombre':   mamaNombre.trim(),
-      if (mamaApellido != null && mamaApellido.trim().isNotEmpty) 'mama_apellido': mamaApellido.trim(),
-      if (direccion    != null && direccion.trim().isNotEmpty)    'direccion':     direccion.trim(),
-      if (descripcion  != null && descripcion.trim().isNotEmpty)  'descripcion':   descripcion.trim(),
-      if (nombreFamilia != null && nombreFamilia.trim().isNotEmpty) 'nombre_familia': nombreFamilia.trim(),
+      if (papaNombre != null && papaNombre.trim().isNotEmpty)
+        'papa_nombre': papaNombre.trim(),
+      if (papaApellido != null && papaApellido.trim().isNotEmpty)
+        'papa_apellido': papaApellido.trim(),
+      if (mamaNombre != null && mamaNombre.trim().isNotEmpty)
+        'mama_nombre': mamaNombre.trim(),
+      if (mamaApellido != null && mamaApellido.trim().isNotEmpty)
+        'mama_apellido': mamaApellido.trim(),
+      if (direccion != null && direccion.trim().isNotEmpty)
+        'direccion': direccion.trim(),
+      if (descripcion != null && descripcion.trim().isNotEmpty)
+        'descripcion': descripcion.trim(),
+      if (nombreFamilia != null && nombreFamilia.trim().isNotEmpty)
+        'nombre_familia': nombreFamilia.trim(),
     };
     final res = await _http.postJson('/api/familias/manual', data: payload);
     debugPrint('POST /api/familias/manual -> ${res.statusCode} :: ${res.body}');
@@ -318,7 +328,9 @@ class FamiliaApi {
       '/api/familias/$idFamilia/vincular',
       data: {'id_usuario': idUsuario, 'rol': rol},
     );
-    debugPrint('POST /api/familias/$idFamilia/vincular -> ${res.statusCode} :: ${res.body}');
+    debugPrint(
+      'POST /api/familias/$idFamilia/vincular -> ${res.statusCode} :: ${res.body}',
+    );
     if (res.statusCode >= 400) throw Exception(parseHttpError(res));
     final decoded = jsonDecode(res.body);
     if (decoded is Map<String, dynamic>) {

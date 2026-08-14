@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,10 +10,10 @@ class ApiHttp extends http.BaseClient {
   factory ApiHttp() => _i;
 
   // dev
-  //static const String baseUrl = 'http://192.168.100.77:3000';
+  static const String baseUrl = 'http://192.168.100.119:3000';
 
   // prod
-  static const String baseUrl = 'https://edi301.apps.isdapps.uk';
+  //static const String baseUrl = 'https://edi301.apps.isdapps.uk';
 
   final http.Client _inner = http.Client();
   final Duration _timeout = const Duration(seconds: 20);

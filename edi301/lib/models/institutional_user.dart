@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class InstitutionalUser {
   final int? matricula;
   final String nombre;

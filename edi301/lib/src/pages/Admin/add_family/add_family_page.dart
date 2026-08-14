@@ -39,7 +39,8 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           IconButton(
             tooltip: 'Modo manual (sin usuarios registrados)',
             icon: const Icon(Icons.edit_note),
-            onPressed: () => Navigator.of(context).pushNamed('add_family_manual'),
+            onPressed: () =>
+                Navigator.of(context).pushNamed('add_family_manual'),
           ),
         ],
       ),
@@ -161,16 +162,90 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
               ),
 
               const Divider(height: 32),
+              const Text(
+                'Tíos EDI',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Puedes agregar alumnos o empleados. No ocupan cupo de hijos.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: c.searchUncleCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Buscar tío por nombre, matrícula o No. empleado',
+                  prefixIcon: Icon(Icons.person_search),
+                ),
+                onChanged: c.searchUncleByText,
+              ),
+              ValueListenableBuilder<List<UserMini>>(
+                valueListenable: c.uncleResults,
+                builder: (_, list, __) => Column(
+                  children: list
+                      .take(5)
+                      .map(
+                        (u) => ListTile(
+                          dense: true,
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person),
+                          ),
+                          title: Text('${u.nombre} ${u.apellido}'.trim()),
+                          subtitle: Text(
+                            u.matricula != null
+                                ? 'Matrícula: ${u.matricula}'
+                                : (u.numEmpleado != null
+                                      ? 'Empleado: ${u.numEmpleado}'
+                                      : ''),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.add_circle_outline),
+                            onPressed: () => setState(() => c.addUncle(u)),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              ValueListenableBuilder<List<UserMini>>(
+                valueListenable: c.uncles,
+                builder: (_, tios, __) => Wrap(
+                  spacing: 6,
+                  children: tios
+                      .asMap()
+                      .entries
+                      .map(
+                        (e) => Chip(
+                          avatar: const Icon(Icons.family_restroom, size: 18),
+                          label: Text(
+                            '${e.value.nombre} ${e.value.apellido}'.trim(),
+                          ),
+                          deleteIcon: const Icon(Icons.close),
+                          onDeleted: () => setState(() => c.removeUncle(e.key)),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+
+              const Divider(height: 32),
               // ── Niños sin cuenta ──────────────────────────────────────────
               Row(
                 children: [
-                  const Icon(Icons.child_friendly, color: Color(0xFF1A5276), size: 20),
+                  const Icon(
+                    Icons.child_friendly,
+                    color: Color(0xFF1A5276),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
                       'Niños del hogar sin cuenta',
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                   TextButton.icon(
@@ -195,7 +270,9 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                       child: Text(
                         'Ningún niño sin cuenta agregado.',
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     );
                   }
@@ -209,13 +286,19 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                           leading: const CircleAvatar(
                             radius: 16,
                             backgroundColor: Color(0xFFD6EAF8),
-                            child: Icon(Icons.child_care,
-                                size: 16, color: Color(0xFF1A5276)),
+                            child: Icon(
+                              Icons.child_care,
+                              size: 16,
+                              color: Color(0xFF1A5276),
+                            ),
                           ),
-                          title: Text(kid.fullName,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13)),
+                          title: Text(
+                            kid.fullName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
                           subtitle: kid.fechaNacimiento != null
                               ? Text(
                                   'Nac: ${kid.fechaNacimiento}',
@@ -223,8 +306,11 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                                 )
                               : null,
                           trailing: IconButton(
-                            icon: const Icon(Icons.remove_circle_outline,
-                                color: Colors.red, size: 20),
+                            icon: const Icon(
+                              Icons.remove_circle_outline,
+                              color: Colors.red,
+                              size: 20,
+                            ),
                             onPressed: () =>
                                 setState(() => c.removeHogarChild(e.key)),
                           ),
@@ -263,14 +349,14 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           title: const Row(
             children: [
               Icon(Icons.child_care, color: Color(0xFF1A5276)),
               SizedBox(width: 8),
-              Text('Agregar niño sin cuenta',
-                  style: TextStyle(fontSize: 16)),
+              Text('Agregar niño sin cuenta', style: TextStyle(fontSize: 16)),
             ],
           ),
           content: SingleChildScrollView(
@@ -310,8 +396,9 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
                     onTap: () async {
                       final picked = await showDatePicker(
                         context: ctx,
-                        initialDate: DateTime.now()
-                            .subtract(const Duration(days: 365 * 5)),
+                        initialDate: DateTime.now().subtract(
+                          const Duration(days: 365 * 5),
+                        ),
                         firstDate: DateTime(2000),
                         lastDate: DateTime.now(),
                       );
@@ -344,26 +431,31 @@ class _AddFamilyPageState extends State<AddFamilyPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancelar',
-                  style: TextStyle(color: Colors.grey.shade600)),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1A5276),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () {
                 if (!formKey.currentState!.validate()) return;
                 setState(() {
-                  c.addHogarChild(HogarChildDraft(
-                    nombre:   nombreCtrl.text.trim(),
-                    apellido: apellidoCtrl.text.trim(),
-                    fechaNacimiento: selectedDate != null
-                        ? DateFormat('yyyy-MM-dd').format(selectedDate!)
-                        : null,
-                  ));
+                  c.addHogarChild(
+                    HogarChildDraft(
+                      nombre: nombreCtrl.text.trim(),
+                      apellido: apellidoCtrl.text.trim(),
+                      fechaNacimiento: selectedDate != null
+                          ? DateFormat('yyyy-MM-dd').format(selectedDate!)
+                          : null,
+                    ),
+                  );
                 });
                 Navigator.pop(ctx);
               },

@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class MediaPicker {
   MediaPicker._();
@@ -35,74 +33,24 @@ class MediaPicker {
     );
 
     if (source == null) return null;
+    if (!context.mounted) return null;
 
-    // Cámara: siempre necesita permiso explícito
-    if (source == ImageSource.camera) {
-      final ok = await _ensureCameraPermission(context);
-      if (!ok) return null;
-    }
-    // Galería en Android 13+: image_picker usa el Photo Picker del sistema,
-    // NO requiere READ_MEDIA_IMAGES ni storage. Solo en iOS pedimos permiso.
-    else if (Platform.isIOS) {
-      final ok = await _ensurePhotosPermissionIOS(context);
-      if (!ok) return null;
-    }
-
+    // image_picker invoca el diálogo nativo de iOS/Android cuando se usa la
+    // cámara. No hacemos una petición previa: en iOS esa comprobación puede
+    // reportar "denegado" antes de que el sistema muestre el diálogo.
     return _picker.pickImage(source: source, imageQuality: 85);
   }
 
-  // ── Cámara ────────────────────────────────────────────────────────────────
-  static Future<bool> _ensureCameraPermission(BuildContext context) async {
-    final status = await Permission.camera.request();
-    if (status.isGranted) return true;
-
-    if (status.isPermanentlyDenied && context.mounted) {
-      await _showSettingsDialog(context);
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permiso de cámara denegado')),
-      );
-    }
-    return false;
-  }
-
-  // ── Galería iOS ───────────────────────────────────────────────────────────
-  static Future<bool> _ensurePhotosPermissionIOS(BuildContext context) async {
-    final status = await Permission.photos.request();
-    if (status.isGranted || status.isLimited) return true;
-
-    if (status.isPermanentlyDenied && context.mounted) {
-      await _showSettingsDialog(context);
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permiso de fotos denegado')),
-      );
-    }
-    return false;
-  }
-
-  static Future<void> _showSettingsDialog(BuildContext context) async {
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Permiso requerido'),
-        content: const Text(
-          'Para continuar necesitas habilitar el permiso en Ajustes.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: const Text('Abrir Ajustes'),
-          ),
-        ],
-      ),
+  /// Abre la galería directamente. En iOS el selector nativo administra el
+  /// acceso a fotos; no se solicita permiso total de biblioteca previamente.
+  static Future<XFile?> pickFromGallery({
+    int imageQuality = 85,
+    double? maxWidth,
+  }) {
+    return _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: imageQuality,
+      maxWidth: maxWidth,
     );
   }
 }

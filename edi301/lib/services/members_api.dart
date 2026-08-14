@@ -11,7 +11,7 @@ class MembersApi {
     required String tipoMiembro,
   }) async {
     final type = tipoMiembro.trim().toUpperCase();
-    const allowed = {'PADRE', 'MADRE', 'HIJO'};
+    const allowed = {'PADRE', 'MADRE', 'HIJO', 'TIO_EDI'};
     if (!allowed.contains(type)) {
       throw Exception('Tipo de miembro inválido: "$tipoMiembro".');
     }

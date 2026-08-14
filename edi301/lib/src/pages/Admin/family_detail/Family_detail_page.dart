@@ -198,7 +198,10 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
         );
       }
     }
@@ -371,15 +374,18 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('¿Desactivar familia?'),
         content: Text(
-            'La familia "${fam.familyName}" quedará inactiva pero sus datos se conservarán.'),
+          'La familia "${fam.familyName}" quedará inactiva pero sus datos se conservarán.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white),
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Desactivar'),
           ),
@@ -392,14 +398,18 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Familia desactivada.'),
-            backgroundColor: Colors.orange),
+          content: Text('Familia desactivada.'),
+          backgroundColor: Colors.orange,
+        ),
       );
       Navigator.pop(context, true); // Volver al listado
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
         );
       }
     }
@@ -416,7 +426,9 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('¿Eliminar la familia "${fam.familyName}" de forma permanente?'),
+            Text(
+              '¿Eliminar la familia "${fam.familyName}" de forma permanente?',
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(10),
@@ -442,11 +454,14 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Sí, eliminar'),
           ),
@@ -461,15 +476,17 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Confirma la eliminación'),
-        content: const Text(
-            '¿Seguro? Esta es una acción irreversible.'),
+        content: const Text('¿Seguro? Esta es una acción irreversible.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar definitivamente'),
           ),
@@ -483,14 +500,18 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Familia eliminada permanentemente.'),
-            backgroundColor: Colors.red),
+          content: Text('Familia eliminada permanentemente.'),
+          backgroundColor: Colors.red,
+        ),
       );
       Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e)), backgroundColor: Colors.red.shade700),
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
         );
       }
     }
@@ -499,9 +520,7 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
   Future<void> _handleEdit() async {
     final updated = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditFamilyPage(family: _family!),
-      ),
+      MaterialPageRoute(builder: (_) => EditFamilyPage(family: _family!)),
     );
     if (updated == true && mounted) {
       setState(() => _isLoading = true);
@@ -528,6 +547,30 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
         ),
         const SizedBox(height: 12),
         _buildHogarChildrenSection(fam),
+        const SizedBox(height: 12),
+        _Section(
+          title: 'Tíos EDI',
+          items: fam.uncles,
+          emptyText: 'Sin tíos EDI asignados.',
+          leadingIcon: Icons.family_restroom,
+          buildTrailing: (uncle) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  'student_detail',
+                  arguments: uncle.idUsuario,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _handleDeleteMember(uncle),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 12),
         _Section(
           title: 'Alumnos asignados',
@@ -587,12 +630,15 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
         // Editar
         OutlinedButton.icon(
           icon: const Icon(Icons.edit, color: _primary),
-          label: const Text('Editar familia',
-              style: TextStyle(color: _primary)),
+          label: const Text(
+            'Editar familia',
+            style: TextStyle(color: _primary),
+          ),
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: _primary),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           onPressed: _handleEdit,
@@ -603,12 +649,15 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
         // Desactivar
         OutlinedButton.icon(
           icon: const Icon(Icons.visibility_off, color: Colors.orange),
-          label: const Text('Desactivar familia',
-              style: TextStyle(color: Colors.orange)),
+          label: const Text(
+            'Desactivar familia',
+            style: TextStyle(color: Colors.orange),
+          ),
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Colors.orange),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           onPressed: _handleDeactivate,
@@ -619,12 +668,15 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
         // Eliminar permanentemente
         OutlinedButton.icon(
           icon: const Icon(Icons.delete_forever, color: Colors.red),
-          label: const Text('Eliminar permanentemente',
-              style: TextStyle(color: Colors.red)),
+          label: const Text(
+            'Eliminar permanentemente',
+            style: TextStyle(color: Colors.red),
+          ),
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Colors.red),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           onPressed: _handlePermanentDelete,

@@ -28,9 +28,9 @@ class HogarChild {
     }
 
     return HogarChild(
-      idHijo:          (j['id_hijo'] as num?)?.toInt(),
-      nombre:          (j['nombre'] ?? '').toString(),
-      apellido:        (j['apellido'] ?? '').toString(),
+      idHijo: (j['id_hijo'] as num?)?.toInt(),
+      nombre: (j['nombre'] ?? '').toString(),
+      apellido: (j['apellido'] ?? '').toString(),
       fechaNacimiento: parseDate(j['fecha_nacimiento']),
     );
   }
@@ -104,6 +104,7 @@ class Family {
   final List<FamilyMember> assignedStudents;
   final List<FamilyMember> householdChildren;
   final List<HogarChild> hogarChildren;
+  final List<FamilyMember> uncles;
   final int? fatherEmployeeId;
   final int? motherEmployeeId;
   final String? papaNumEmpleado;
@@ -128,6 +129,7 @@ class Family {
     this.assignedStudents = const [],
     this.householdChildren = const [],
     this.hogarChildren = const [],
+    this.uncles = const [],
     this.fatherEmployeeId,
     this.motherEmployeeId,
     this.papaNumEmpleado,
@@ -163,6 +165,7 @@ class Family {
 
     final List<FamilyMember> householdChildren = [];
     final List<FamilyMember> assignedStudents = [];
+    final List<FamilyMember> uncles = [];
 
     if (j['miembros'] is List) {
       for (final miembro in (j['miembros'] as List)) {
@@ -172,6 +175,8 @@ class Family {
             householdChildren.add(familyMember);
           } else if (familyMember.tipoMiembro == 'ALUMNO_ASIGNADO') {
             assignedStudents.add(familyMember);
+          } else if (familyMember.tipoMiembro == 'TIO_EDI') {
+            uncles.add(familyMember);
           }
         }
       }
@@ -213,6 +218,7 @@ class Family {
       householdChildren: householdChildren,
       assignedStudents: assignedStudents,
       hogarChildren: hogarChildren,
+      uncles: uncles,
       fatherEmployeeId:
           (j['papa_id'] ??
                   j['Papa_id'] ??
@@ -260,6 +266,7 @@ class Family {
     String? fotoPerfilUrl,
     List<FamilyMember>? assignedStudents,
     List<FamilyMember>? householdChildren,
+    List<FamilyMember>? uncles,
     int? fatherEmployeeId,
     int? motherEmployeeId,
     String? papaNumEmpleado,
@@ -277,6 +284,7 @@ class Family {
       fotoPerfilUrl: fotoPerfilUrl ?? this.fotoPerfilUrl,
       assignedStudents: assignedStudents ?? this.assignedStudents,
       householdChildren: householdChildren ?? this.householdChildren,
+      uncles: uncles ?? this.uncles,
       fatherEmployeeId: fatherEmployeeId ?? this.fatherEmployeeId,
       motherEmployeeId: motherEmployeeId ?? this.motherEmployeeId,
       papaNumEmpleado: papaNumEmpleado ?? this.papaNumEmpleado,

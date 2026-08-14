@@ -580,6 +580,26 @@ class _FamilyPageState extends State<FamiliyPage> {
       );
     }
 
+    // ---- Tíos EDI ----
+    for (final tio in family.uncles) {
+      final isMe = myId != null && tio.idUsuario == myId;
+      final fotoAbs = _absUrl((tio.fotoPerfil ?? '').toString());
+      widgets.add(
+        ProfileCard(
+          imageUrl: fotoAbs,
+          name: tio.fullName,
+          school: 'Tío EDI',
+          phoneNumber: tio.telefono,
+          onTap: () => Navigator.pushNamed(
+            context,
+            'student_detail',
+            arguments: tio.idUsuario,
+          ),
+          onChat: isMe ? null : () => _startChat(tio.idUsuario, tio.fullName),
+        ),
+      );
+    }
+
     // ---- Niños del hogar sin cuenta (mostrados como hijos sanguíneos) ----
     for (final h in family.hogarChildren) {
       widgets.add(
