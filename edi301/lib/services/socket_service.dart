@@ -9,6 +9,7 @@ class SocketService {
 
   IO.Socket? _socket;
   Completer<void>? _connectedCompleter;
+  final Map<String, int> _roomReferences = <String, int>{};
 
   IO.Socket get socket {
     if (_socket == null) {
@@ -44,6 +45,9 @@ class SocketService {
 
     _socket!.onConnect((_) {
       print('✅ Socket conectado (id=${_socket!.id})');
+      for (final roomId in _roomReferences.keys) {
+        _socket!.emit('join_room', roomId);
+      }
       if (_connectedCompleter != null && !_connectedCompleter!.isCompleted) {
         _connectedCompleter!.complete();
       }
@@ -76,46 +80,43 @@ class SocketService {
   }
 
   Future<void> joinFamilyRoom(int familyId) async {
-    await ensureConnected();
-    if (!isConnected) {
-      print('⚠️ No conectado, NO join familia_$familyId');
-      return;
-    }
-    _socket!.emit('join_room', 'familia_$familyId');
-    print('➡️ join_room familia_$familyId');
+    await _joinRoom('familia_$familyId');
   }
 
   Future<void> joinChatRoom(int salaId) async {
-    await ensureConnected();
-    if (!isConnected) {
-      print('⚠️ No conectado, NO join sala_$salaId');
-      return;
-    }
-    _socket!.emit('join_room', 'sala_$salaId');
-    print('➡️ join_room sala_$salaId');
+    await _joinRoom('sala_$salaId');
   }
 
   Future<void> joinInstitucionalRoom() async {
-    await ensureConnected();
-    if (!isConnected) {
-      print('⚠️ No conectado, NO join institucional');
-      return;
-    }
-    _socket!.emit('join_room', 'institucional');
-    print('➡️ join_room institucional');
+    await _joinRoom('institucional');
   }
 
   Future<void> joinUserRoom(int userId) async {
+    await _joinRoom('user_$userId');
+  }
+
+  Future<void> _joinRoom(String roomId) async {
+    final previousReferences = _roomReferences[roomId] ?? 0;
+    _roomReferences[roomId] = previousReferences + 1;
+    final wasConnected = isConnected;
     await ensureConnected();
     if (!isConnected) {
-      print('⚠️ No conectado, NO join user_$userId');
+      print('⚠️ No conectado; la sala $roomId se recuperará al reconectar');
       return;
     }
-    _socket!.emit('join_room', 'user_$userId');
-    print('➡️ join_room user_$userId');
+    if (wasConnected && previousReferences == 0) {
+      _socket!.emit('join_room', roomId);
+    }
+    print('➡️ join_room $roomId');
   }
 
   void leaveRoom(String roomId) {
+    final references = _roomReferences[roomId] ?? 0;
+    if (references > 1) {
+      _roomReferences[roomId] = references - 1;
+      return;
+    }
+    _roomReferences.remove(roomId);
     if (_socket == null) return;
     if (!isConnected) {
       print('⚠️ No conectado, NO leave $roomId');
@@ -130,6 +131,7 @@ class SocketService {
     _socket?.dispose();
     _socket = null;
     _connectedCompleter = null;
+    _roomReferences.clear();
     print('🧹 Socket disposed');
   }
 }

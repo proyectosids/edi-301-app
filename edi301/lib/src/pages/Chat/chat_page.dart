@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edi301/services/chat_api.dart';
+import 'package:edi301/services/socket_service.dart';
 
 class ChatPage extends StatefulWidget {
   final int idSala;
@@ -16,12 +17,17 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final ChatApi _api = ChatApi();
+  final SocketService _socketService = SocketService();
   final TextEditingController _msgCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
 
   List<dynamic> _mensajes = [];
   bool _loading = true;
+  bool _loadingOlder = false;
+  bool _hasOlder = false;
   int? _myId;
+
+  static const int _pageSize = 100;
 
   Timer? _pollingTimer; // ✅ Referencia para el temporizador
 
@@ -34,14 +40,22 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _init() async {
     await _loadMyId();
     await _loadMessages(); // Carga inicial
-    _api.markAsRead(widget.idSala); // Marcar sala como leída al entrar (fire & forget)
-    _startPolling();       // ✅ Inicia el refresco automático
+    await _socketService.joinChatRoom(widget.idSala);
+    if (!mounted) return;
+    _socketService.socket.off('nuevo_mensaje');
+    _socketService.socket.on('nuevo_mensaje', (_) {
+      if (mounted) _loadMessages(isPolling: true);
+    });
+    _api.markAsRead(
+      widget.idSala,
+    ); // Marcar sala como leída al entrar (fire & forget)
+    _startPolling(); // ✅ Inicia el refresco automático
   }
 
-  // ✅ Polling cada 2 segundos
+  // Respaldo por si el socket pierde conectividad temporalmente.
   void _startPolling() {
     _pollingTimer?.cancel(); // Limpia cualquier timer previo
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
         _loadMessages(isPolling: true);
       }
@@ -60,7 +74,12 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
-    _pollingTimer?.cancel(); // ✅ Obligatorio: detener el timer al salir de la página
+    _pollingTimer
+        ?.cancel(); // ✅ Obligatorio: detener el timer al salir de la página
+    if (_socketService.isReady) {
+      _socketService.socket.off('nuevo_mensaje');
+    }
+    _socketService.leaveRoom('sala_${widget.idSala}');
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -74,7 +93,7 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     try {
-      final msgs = await _api.getMessages(widget.idSala);
+      final msgs = await _api.getMessages(widget.idSala, limit: _pageSize);
 
       final normalized = msgs.map((m) {
         if (m is! Map) return m;
@@ -87,10 +106,12 @@ class _ChatPageState extends State<ChatPage> {
       }).toList();
 
       if (mounted) {
-        // Solo actualizamos la UI si la cantidad de mensajes cambió
-        if (normalized.length != _mensajes.length) {
+        final initialLoad = _mensajes.isEmpty;
+        final merged = _mergeMessages(_mensajes, normalized);
+        if (merged.length != _mensajes.length) {
           setState(() {
-            _mensajes = normalized;
+            _mensajes = merged;
+            if (initialLoad) _hasOlder = normalized.length == _pageSize;
             _loading = false;
           });
           _scrollToBottom();
@@ -104,6 +125,62 @@ class _ChatPageState extends State<ChatPage> {
       // solo quitar spinner en primera carga
       if (mounted && _loading) setState(() => _loading = false);
       if (!isPolling) print('❌ Error cargando mensajes: $e');
+    }
+  }
+
+  List<dynamic> _mergeMessages(List<dynamic> current, List<dynamic> incoming) {
+    final byId = <int, dynamic>{};
+    final pending = <dynamic>[];
+    for (final raw in [...current, ...incoming]) {
+      if (raw is! Map) continue;
+      if (raw['_temp'] == true) {
+        pending.add(raw);
+        continue;
+      }
+      final id = int.tryParse('${raw['id_mensaje']}');
+      if (id != null) byId[id] = raw;
+    }
+    final ids = byId.keys.toList()..sort();
+    return [...ids.map((id) => byId[id]), ...pending];
+  }
+
+  Future<void> _loadOlderMessages() async {
+    if (_loadingOlder || !_hasOlder || _mensajes.isEmpty) return;
+    final firstId = int.tryParse('${_mensajes.first['id_mensaje']}');
+    if (firstId == null) return;
+
+    setState(() => _loadingOlder = true);
+    final previousExtent = _scrollCtrl.hasClients
+        ? _scrollCtrl.position.maxScrollExtent
+        : 0.0;
+    try {
+      final older = await _api.getMessages(
+        widget.idSala,
+        limit: _pageSize,
+        beforeId: firstId,
+      );
+      final normalized = older.map((m) {
+        if (m is! Map) return m;
+        final msg = Map<String, dynamic>.from(m);
+        final senderId = int.tryParse('${msg['id_usuario']}');
+        msg['es_mio'] = (_myId != null && senderId == _myId) ? 1 : 0;
+        return msg;
+      }).toList();
+      if (!mounted) return;
+      setState(() {
+        _mensajes = _mergeMessages(normalized, _mensajes);
+        _hasOlder = normalized.length == _pageSize;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollCtrl.hasClients) {
+          final delta = _scrollCtrl.position.maxScrollExtent - previousExtent;
+          _scrollCtrl.jumpTo(
+            delta.clamp(0.0, _scrollCtrl.position.maxScrollExtent),
+          );
+        }
+      });
+    } finally {
+      if (mounted) setState(() => _loadingOlder = false);
     }
   }
 
@@ -132,6 +209,9 @@ class _ChatPageState extends State<ChatPage> {
     _api.markAsRead(widget.idSala);
 
     if (success) {
+      if (mounted) {
+        setState(() => _mensajes.removeWhere((m) => m['id_mensaje'] == tempId));
+      }
       // Refrescamos inmediatamente para confirmar el mensaje
       _loadMessages(isPolling: true);
     } else {
@@ -175,9 +255,28 @@ class _ChatPageState extends State<ChatPage> {
                   : ListView.builder(
                       controller: _scrollCtrl,
                       padding: const EdgeInsets.all(10),
-                      itemCount: _mensajes.length,
+                      itemCount: _mensajes.length + (_hasOlder ? 1 : 0),
                       itemBuilder: (ctx, i) {
-                        final msg = _mensajes[i];
+                        if (_hasOlder && i == 0) {
+                          return Center(
+                            child: TextButton.icon(
+                              onPressed: _loadingOlder
+                                  ? null
+                                  : _loadOlderMessages,
+                              icon: _loadingOlder
+                                  ? const SizedBox.square(
+                                      dimension: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.history),
+                              label: const Text('Cargar mensajes anteriores'),
+                            ),
+                          );
+                        }
+                        final index = _hasOlder ? i - 1 : i;
+                        final msg = _mensajes[index];
                         if (msg is! Map) return const SizedBox.shrink();
 
                         final esMio =

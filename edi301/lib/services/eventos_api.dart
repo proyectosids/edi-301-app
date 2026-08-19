@@ -91,9 +91,12 @@ class EventosApi {
     }
   }
 
-  Future<List<Evento>> listar() async {
+  Future<List<Evento>> listar({int page = 1, int limit = 100}) async {
     try {
-      final res = await _http.getJson('/api/agenda');
+      final res = await _http.getJson(
+        '/api/agenda',
+        query: {'page': page, 'limit': limit},
+      );
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -107,5 +110,17 @@ class EventosApi {
       print('Error listando eventos: $e');
     }
     return [];
+  }
+
+  Future<List<Evento>> listarTodos({int limit = 200}) async {
+    final all = <Evento>[];
+    var page = 1;
+    while (true) {
+      final batch = await listar(page: page, limit: limit);
+      all.addAll(batch);
+      if (batch.length < limit) break;
+      page++;
+    }
+    return all;
   }
 }

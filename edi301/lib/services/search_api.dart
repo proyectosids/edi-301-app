@@ -113,7 +113,7 @@ class SearchApi {
 
   Future<SearchResult> searchAll(String input) async {
     final q = input.trim();
-    if (q.isEmpty) {
+    if (q.length < 2) {
       return SearchResult(
         alumnos: const [],
         empleados: const [],

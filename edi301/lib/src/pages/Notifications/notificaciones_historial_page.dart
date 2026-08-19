@@ -20,20 +20,43 @@ class _NotificacionesHistorialPageState
   static const _gold = Color.fromRGBO(245, 188, 6, 1);
 
   final NotificacionesApi _api = NotificacionesApi();
+  final ScrollController _scrollController = ScrollController();
   List<NotificacionItem> _items = [];
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  int _nextPage = 1;
+
+  static const int _pageSize = 100;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.extentAfter < 300) _loadMore();
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final list = await _api.list();
-      if (mounted) setState(() => _items = list);
+      final list = await _api.list(page: 1, limit: _pageSize);
+      if (mounted) {
+        setState(() {
+          _items = list;
+          _nextPage = 2;
+          _hasMore = list.length == _pageSize;
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,6 +68,25 @@ class _NotificacionesHistorialPageState
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await _api.list(page: _nextPage, limit: _pageSize);
+      if (!mounted) return;
+      final knownIds = _items.map((item) => item.id).toSet();
+      setState(() {
+        _items.addAll(next.where((item) => knownIds.add(item.id)));
+        _nextPage++;
+        _hasMore = next.length == _pageSize;
+      });
+    } catch (_) {
+      // Se conserva lo ya cargado; el usuario puede reintentar al desplazarse.
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -334,7 +376,10 @@ class _NotificacionesHistorialPageState
           children: [
             const Text(
               'Notificaciones',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             if (unread > 0) ...[
               const SizedBox(width: 8),
@@ -384,12 +429,21 @@ class _NotificacionesHistorialPageState
               child: _items.isEmpty
                   ? _buildEmpty()
                   : ListView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.symmetric(
                         vertical: 8,
                         horizontal: 12,
                       ),
-                      itemCount: _items.length,
-                      itemBuilder: (_, i) => _buildItem(_items[i]),
+                      itemCount: _items.length + (_loadingMore ? 1 : 0),
+                      itemBuilder: (_, i) {
+                        if (i == _items.length) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        return _buildItem(_items[i]);
+                      },
                     ),
             ),
     );
@@ -513,7 +567,9 @@ class _NotificacionesHistorialPageState
                                     ? FontWeight.bold
                                     : FontWeight.w600,
                                 fontSize: 14,
-                                color: isUnread ? Colors.black87 : Colors.black54,
+                                color: isUnread
+                                    ? Colors.black87
+                                    : Colors.black54,
                               ),
                             ),
                           ),

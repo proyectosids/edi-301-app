@@ -8,7 +8,7 @@ class UsuariosApi {
 
   /// Busca usuarios activos por nombre, matrícula o num_empleado
   Future<List<Map<String, dynamic>>> buscarPorIdent(String q) async {
-    if (q.trim().isEmpty) return [];
+    if (q.trim().length < 2) return [];
     final res = await _http.getJson(
       '/api/usuarios/buscar-por-ident',
       query: {'q': q.trim()},
@@ -50,7 +50,10 @@ class UsuariosApi {
   }
 
   /// Cambia el rol de un usuario (id_rol = 1 por defecto → Admin)
-  Future<Map<String, dynamic>> cambiarRol(int idUsuario, {int idRol = 1}) async {
+  Future<Map<String, dynamic>> cambiarRol(
+    int idUsuario, {
+    int idRol = 1,
+  }) async {
     final res = await _http.patchJson(
       '/api/usuarios/cambiar-rol',
       data: {'id_usuario': idUsuario, 'id_rol': idRol},

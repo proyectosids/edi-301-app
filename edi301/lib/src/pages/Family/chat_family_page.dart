@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:edi301/services/mensajes_api.dart';
 import 'package:edi301/core/api_client_http.dart';
+import 'package:edi301/services/socket_service.dart';
 
 class ChatFamilyPage extends StatefulWidget {
   final int idFamilia;
@@ -25,12 +26,17 @@ class ChatFamilyPage extends StatefulWidget {
 
 class _ChatFamilyPageState extends State<ChatFamilyPage> {
   final MensajesApi _api = MensajesApi();
+  final SocketService _socketService = SocketService();
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   List<dynamic> _mensajes = [];
   int _miIdUsuario = 0;
   bool _loading = true; // ✅ Control de carga inicial
+  bool _loadingOlder = false;
+  bool _hasOlder = false;
+
+  static const int _pageSize = 100;
 
   Timer? _pollingTimer; // ✅ Referencia para el temporizador
 
@@ -51,13 +57,19 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
 
     await _loadUser();
     await _cargarMensajes(); // Carga inicial de mensajes
+    await _socketService.joinFamilyRoom(widget.idFamilia);
+    if (!mounted) return;
+    _socketService.socket.off('nuevo_mensaje_familia');
+    _socketService.socket.on('nuevo_mensaje_familia', (_) {
+      if (mounted) _cargarMensajes(quiet: true);
+    });
     _startPolling(); // ✅ Inicia el refresco automático
   }
 
-  // ✅ Configura el temporizador para consultar mensajes cada 3 segundos
+  // Respaldo por si el socket pierde conectividad temporalmente.
   void _startPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
         _cargarMensajes(quiet: true); // Carga silenciosa en segundo plano
       }
@@ -67,6 +79,10 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
   @override
   void dispose() {
     _pollingTimer?.cancel(); // ✅ Obligatorio: detener el timer al salir
+    if (_socketService.isReady) {
+      _socketService.socket.off('nuevo_mensaje_familia');
+    }
+    _socketService.leaveRoom('familia_${widget.idFamilia}');
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -91,19 +107,69 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
       setState(() => _loading = true);
     }
 
-    final nuevos = await _api.getMensajesFamilia(widget.idFamilia);
+    final nuevos = await _api.getMensajesFamilia(
+      widget.idFamilia,
+      limit: _pageSize,
+    );
 
     if (mounted) {
-      // Solo actualizamos la UI y el scroll si la cantidad de mensajes cambió
-      if (nuevos.length != _mensajes.length) {
+      final initialLoad = _mensajes.isEmpty;
+      final merged = _mergeMessages(_mensajes, nuevos);
+      if (merged.length != _mensajes.length) {
         setState(() {
-          _mensajes = nuevos;
+          _mensajes = merged;
+          if (initialLoad) _hasOlder = nuevos.length == _pageSize;
           _loading = false;
         });
         _scrollToBottom();
       } else {
         if (_loading) setState(() => _loading = false);
       }
+    }
+  }
+
+  List<dynamic> _mergeMessages(List<dynamic> current, List<dynamic> incoming) {
+    final byId = <int, dynamic>{};
+    for (final raw in [...current, ...incoming]) {
+      if (raw is! Map) continue;
+      final id = int.tryParse('${raw['id_mensaje']}');
+      if (id != null) byId[id] = raw;
+    }
+    final ids = byId.keys.toList()..sort();
+    return ids.map((id) => byId[id]).toList();
+  }
+
+  Future<void> _cargarAnteriores() async {
+    if (_loadingOlder || !_hasOlder || _mensajes.isEmpty) return;
+    final firstId = int.tryParse('${_mensajes.first['id_mensaje']}');
+    if (firstId == null) return;
+
+    setState(() => _loadingOlder = true);
+    final previousExtent = _scrollController.hasClients
+        ? _scrollController.position.maxScrollExtent
+        : 0.0;
+    try {
+      final anteriores = await _api.getMensajesFamilia(
+        widget.idFamilia,
+        limit: _pageSize,
+        beforeId: firstId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _mensajes = _mergeMessages(anteriores, _mensajes);
+        _hasOlder = anteriores.length == _pageSize;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          final delta =
+              _scrollController.position.maxScrollExtent - previousExtent;
+          _scrollController.jumpTo(
+            delta.clamp(0.0, _scrollController.position.maxScrollExtent),
+          );
+        }
+      });
+    } finally {
+      if (mounted) setState(() => _loadingOlder = false);
     }
   }
 
@@ -177,9 +243,28 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
                         horizontal: 10,
                         vertical: 20,
                       ),
-                      itemCount: _mensajes.length,
+                      itemCount: _mensajes.length + (_hasOlder ? 1 : 0),
                       itemBuilder: (context, index) {
-                        final msg = _mensajes[index];
+                        if (_hasOlder && index == 0) {
+                          return Center(
+                            child: TextButton.icon(
+                              onPressed: _loadingOlder
+                                  ? null
+                                  : _cargarAnteriores,
+                              icon: _loadingOlder
+                                  ? const SizedBox.square(
+                                      dimension: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.history),
+                              label: const Text('Cargar mensajes anteriores'),
+                            ),
+                          );
+                        }
+                        final messageIndex = _hasOlder ? index - 1 : index;
+                        final msg = _mensajes[messageIndex];
                         final esMio = msg['id_usuario'] == _miIdUsuario;
                         return _buildMessageBubble(msg, esMio);
                       },
@@ -249,7 +334,8 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
   /// Convierte un timestamp del servidor (con o sin 'Z') a hora local HH:mm.
   String _formatMsgTime(String? raw) {
     if (raw == null || raw.isEmpty) return '';
-    final str = (raw.endsWith('Z') || raw.contains('+') || raw.contains('-', 11))
+    final str =
+        (raw.endsWith('Z') || raw.contains('+') || raw.contains('-', 11))
         ? raw
         : '${raw}Z';
     final dt = DateTime.tryParse(str)?.toLocal();

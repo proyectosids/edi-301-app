@@ -1,28 +1,18 @@
 import 'dart:convert';
 import 'package:edi301/core/api_client_http.dart';
-import 'package:edi301/auth/token_storage.dart';
-import 'package:http/http.dart' as http;
 
 class MensajesApi {
-  final String _baseUrl = ApiHttp.baseUrl;
-  final TokenStorage _tokenStorage = TokenStorage();
-  Future<List<dynamic>> getMensajesFamilia(int idFamilia) async {
+  final ApiHttp _http = ApiHttp();
+
+  Future<List<dynamic>> getMensajesFamilia(
+    int idFamilia, {
+    int limit = 100,
+    int? beforeId,
+  }) async {
     try {
-      final token = await _tokenStorage.read();
-
-      if (token == null || token.isEmpty) {
-        print("Chat: No hay token válido en TokenStorage.");
-        return [];
-      }
-
-      final uri = Uri.parse('$_baseUrl/api/mensajes/familia/$idFamilia');
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+      final response = await _http.getJson(
+        '/api/mensajes/familia/$idFamilia',
+        query: {'limit': limit, if (beforeId != null) 'before_id': beforeId},
       );
 
       if (response.statusCode == 200) {
@@ -39,17 +29,10 @@ class MensajesApi {
 
   Future<int> getUnreadCount(int idFamilia, String desde) async {
     try {
-      final token = await _tokenStorage.read();
-      if (token == null || token.isEmpty) return 0;
-
-      final uri = Uri.parse(
-        '$_baseUrl/api/mensajes/familia/$idFamilia/no-leidos',
-      ).replace(queryParameters: {'desde': desde});
-
-      final response = await http.get(uri, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      });
+      final response = await _http.getJson(
+        '/api/mensajes/familia/$idFamilia/no-leidos',
+        query: {'desde': desde},
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -63,22 +46,9 @@ class MensajesApi {
 
   Future<bool> enviarMensaje(int idFamilia, String mensaje) async {
     try {
-      final token = await _tokenStorage.read();
-
-      if (token == null || token.isEmpty) {
-        print("Chat: No hay token, no se puede enviar.");
-        return false;
-      }
-
-      final uri = Uri.parse('$_baseUrl/api/mensajes');
-
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'id_familia': idFamilia, 'mensaje': mensaje}),
+      final response = await _http.postJson(
+        '/api/mensajes',
+        data: {'id_familia': idFamilia, 'mensaje': mensaje},
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {

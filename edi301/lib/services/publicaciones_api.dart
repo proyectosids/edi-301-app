@@ -107,7 +107,8 @@ class PublicacionesApi {
   }) async {
     try {
       final res = await _http.getJson(
-        '/api/publicaciones/familia/$idFamilia?page=$page&limit=$limit',
+        '/api/publicaciones/familia/$idFamilia',
+        query: {'page': page, 'limit': limit},
       );
 
       if (res.statusCode == 200) {
@@ -251,7 +252,8 @@ class PublicacionesApi {
     int limit = 50,
   }) async {
     final response = await _http.getJson(
-      '/api/publicaciones/feed/global?page=$page&limit=$limit',
+      '/api/publicaciones/feed/global',
+      query: {'page': page, 'limit': limit},
     );
 
     if (response.statusCode == 200) {
@@ -259,5 +261,25 @@ class PublicacionesApi {
     } else {
       throw Exception('Error cargando feed global');
     }
+  }
+
+  Future<List<dynamic>> getAllPostsFamilia(
+    int idFamilia, {
+    int limit = 100,
+  }) async {
+    final all = <dynamic>[];
+    var page = 1;
+    while (true) {
+      final response = await getPostsFamilia(
+        idFamilia,
+        page: page,
+        limit: limit,
+      );
+      final data = List<dynamic>.from(response['data'] ?? const []);
+      all.addAll(data);
+      if (response['hasMore'] != true || data.isEmpty) break;
+      page++;
+    }
+    return all;
   }
 }

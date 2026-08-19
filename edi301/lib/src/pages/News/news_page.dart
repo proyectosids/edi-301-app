@@ -783,7 +783,7 @@ class _NewsPageState extends State<NewsPage> {
   //                        Salida > Deporte > Arte > Comunicado
   _PostTheme? _resolvePostTheme(Map<String, dynamic> post) {
     final tipo = (post['tipo'] ?? '').toString().toUpperCase();
-    final msg  = (post['mensaje'] ?? '').toString();
+    final msg = (post['mensaje'] ?? '').toString();
 
     bool has(String e) => msg.contains(e);
     bool hasAny(List<String> list) => list.any((e) => msg.contains(e));
@@ -791,104 +791,104 @@ class _NewsPageState extends State<NewsPage> {
     // 1 · EMERGENCIA
     if (hasAny(['⚠️', '❗', '🚨', '🆘'])) {
       return const _PostTheme(
-        bgColor:      Color(0xFFFFEBEE),
-        borderColor:  Color(0xFFD32F2F),
-        bannerColor:  Color(0xFFD32F2F),
-        bannerText:   '⚠️  AVISO URGENTE  ⚠️',
-        avatarColor:  Color(0xFFD32F2F),
+        bgColor: Color(0xFFFFEBEE),
+        borderColor: Color(0xFFD32F2F),
+        bannerColor: Color(0xFFD32F2F),
+        bannerText: '⚠️  AVISO URGENTE  ⚠️',
+        avatarColor: Color(0xFFD32F2F),
         trailingIcon: Icons.warning_rounded,
-        iconColor:    Color(0xFFD32F2F),
+        iconColor: Color(0xFFD32F2F),
       );
     }
 
     // 2 · CUMPLEAÑOS
     if (tipo == 'CUMPLEAÑOS' || (has('🎂') && has('🎉'))) {
       return const _PostTheme(
-        bgColor:      Color(0xFFFFF8E1),
-        borderColor:  Colors.orangeAccent,
-        bannerColor:  Colors.deepOrange,
-        bannerText:   '🎉  ¡CELEBRACIÓN ESPECIAL!  🎉',
-        avatarColor:  Colors.orange,
+        bgColor: Color(0xFFFFF8E1),
+        borderColor: Colors.orangeAccent,
+        bannerColor: Colors.deepOrange,
+        bannerText: '🎉  ¡CELEBRACIÓN ESPECIAL!  🎉',
+        avatarColor: Colors.orange,
         trailingIcon: Icons.cake,
-        iconColor:    Colors.pink,
+        iconColor: Colors.pink,
       );
     }
 
     // 3 · LOGRO / RECONOCIMIENTO
     if (has('🏆') || has('🥇') || (has('⭐') && has('🎊'))) {
       return const _PostTheme(
-        bgColor:      Color(0xFFFFFDE7),
-        borderColor:  Colors.amber,
-        bannerColor:  Color(0xFFF9A825),
-        bannerText:   '🏆  ¡LOGRO ESPECIAL!',
-        avatarColor:  Colors.amber,
+        bgColor: Color(0xFFFFFDE7),
+        borderColor: Colors.amber,
+        bannerColor: Color(0xFFF9A825),
+        bannerText: '🏆  ¡LOGRO ESPECIAL!',
+        avatarColor: Colors.amber,
         trailingIcon: Icons.emoji_events,
-        iconColor:    Colors.amber,
+        iconColor: Colors.amber,
       );
     }
 
     // 4 · ESPIRITUAL / FE
     if (has('🙏') && hasAny(['📖', '✝️', '🕊️', '⛪', '🕌', '🛐'])) {
       return const _PostTheme(
-        bgColor:      Color(0xFFF3E5F5),
-        borderColor:  Color(0xFF7B1FA2),
-        bannerColor:  Color(0xFF7B1FA2),
-        bannerText:   '🙏  MOMENTO ESPIRITUAL',
-        avatarColor:  Color(0xFF7B1FA2),
+        bgColor: Color(0xFFF3E5F5),
+        borderColor: Color(0xFF7B1FA2),
+        bannerColor: Color(0xFF7B1FA2),
+        bannerText: '🙏  MOMENTO ESPIRITUAL',
+        avatarColor: Color(0xFF7B1FA2),
         trailingIcon: Icons.self_improvement,
-        iconColor:    Color(0xFF7B1FA2),
+        iconColor: Color(0xFF7B1FA2),
       );
     }
 
     // 5 · SALIDA / PASEO / VIAJE
     if (hasAny(['🚌', '🗺️', '✈️', '🧳', '🏕️', '🌍'])) {
       return const _PostTheme(
-        bgColor:      Color(0xFFE0F7FA),
-        borderColor:  Color(0xFF00838F),
-        bannerColor:  Color(0xFF00838F),
-        bannerText:   '🗺️  SALIDA ESPECIAL',
-        avatarColor:  Color(0xFF00838F),
+        bgColor: Color(0xFFE0F7FA),
+        borderColor: Color(0xFF00838F),
+        bannerColor: Color(0xFF00838F),
+        bannerText: '🗺️  SALIDA ESPECIAL',
+        avatarColor: Color(0xFF00838F),
         trailingIcon: Icons.explore,
-        iconColor:    Color(0xFF00838F),
+        iconColor: Color(0xFF00838F),
       );
     }
 
     // 6 · DEPORTE / ACTIVIDAD FÍSICA
     if (hasAny(['⚽', '🏀', '🏈', '🏃', '🏋️', '🤸', '🎽', '🧗'])) {
       return const _PostTheme(
-        bgColor:      Color(0xFFE8F5E9),
-        borderColor:  Color(0xFF2E7D32),
-        bannerColor:  Color(0xFF2E7D32),
-        bannerText:   '⚽  ACTIVIDAD DEPORTIVA',
-        avatarColor:  Color(0xFF388E3C),
+        bgColor: Color(0xFFE8F5E9),
+        borderColor: Color(0xFF2E7D32),
+        bannerColor: Color(0xFF2E7D32),
+        bannerText: '⚽  ACTIVIDAD DEPORTIVA',
+        avatarColor: Color(0xFF388E3C),
         trailingIcon: Icons.directions_run,
-        iconColor:    Color(0xFF2E7D32),
+        iconColor: Color(0xFF2E7D32),
       );
     }
 
     // 7 · ARTE / MÚSICA / TALENTO
     if (hasAny(['🎨', '🎵', '🎭', '🎤', '🎸', '🎬', '🖼️', '🎻'])) {
       return const _PostTheme(
-        bgColor:      Color(0xFFFCE4EC),
-        borderColor:  Color(0xFFC2185B),
-        bannerColor:  Color(0xFFC2185B),
-        bannerText:   '🎨  EXPRESIÓN ARTÍSTICA',
-        avatarColor:  Color(0xFFE91E63),
+        bgColor: Color(0xFFFCE4EC),
+        borderColor: Color(0xFFC2185B),
+        bannerColor: Color(0xFFC2185B),
+        bannerText: '🎨  EXPRESIÓN ARTÍSTICA',
+        avatarColor: Color(0xFFE91E63),
         trailingIcon: Icons.palette,
-        iconColor:    Color(0xFFC2185B),
+        iconColor: Color(0xFFC2185B),
       );
     }
 
     // 8 · COMUNICADO OFICIAL
     if (hasAny(['📢', '📣'])) {
       return const _PostTheme(
-        bgColor:      Color(0xFFE3F2FD),
-        borderColor:  Color(0xFF1565C0),
-        bannerColor:  Color(0xFF1565C0),
-        bannerText:   '📢  COMUNICADO OFICIAL',
-        avatarColor:  Color(0xFF1976D2),
+        bgColor: Color(0xFFE3F2FD),
+        borderColor: Color(0xFF1565C0),
+        bannerColor: Color(0xFF1565C0),
+        bannerText: '📢  COMUNICADO OFICIAL',
+        avatarColor: Color(0xFF1976D2),
         trailingIcon: Icons.campaign,
-        iconColor:    Color(0xFF1565C0),
+        iconColor: Color(0xFF1565C0),
       );
     }
 
@@ -928,210 +928,216 @@ class _NewsPageState extends State<NewsPage> {
             )
           : null,
       child: Card(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      elevation: isPulsing ? 8 : (theme != null ? 6 : 2),
-      color: theme?.bgColor ?? Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: isPulsing
-            ? const BorderSide(color: Color(0xFFF5BC06), width: 3)
-            : (theme != null
-                ? BorderSide(color: theme.borderColor, width: 1.5)
-                : BorderSide.none),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (theme != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              decoration: BoxDecoration(
-                color: theme.bannerColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(15),
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        elevation: isPulsing ? 8 : (theme != null ? 6 : 2),
+        color: theme?.bgColor ?? Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+          side: isPulsing
+              ? const BorderSide(color: Color(0xFFF5BC06), width: 3)
+              : (theme != null
+                    ? BorderSide(color: theme.borderColor, width: 1.5)
+                    : BorderSide.none),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (theme != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                decoration: BoxDecoration(
+                  color: theme.bannerColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(15),
+                  ),
+                ),
+                child: Text(
+                  theme.bannerText,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              child: Text(
-                theme.bannerText,
-                textAlign: TextAlign.center,
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
+              ),
+              leading: CircleAvatar(
+                backgroundColor: theme?.avatarColor ?? Colors.blue[100]!,
+                backgroundImage: post['foto_perfil'] != null
+                    ? NetworkImage(_fixUrl(post['foto_perfil']))
+                    : null,
+                child: post['foto_perfil'] == null
+                    ? Text(
+                        nombreUsuario.isNotEmpty ? nombreUsuario[0] : 'U',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    : null,
+              ),
+              title: Text(
+                nombreUsuario,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: Colors.white,
+                  fontSize: 16,
                 ),
               ),
-            ),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 4,
-            ),
-            leading: CircleAvatar(
-              backgroundColor:
-                  theme?.avatarColor ?? Colors.blue[100]!,
-              backgroundImage: post['foto_perfil'] != null
-                  ? NetworkImage(_fixUrl(post['foto_perfil']))
-                  : null,
-              child: post['foto_perfil'] == null
-                  ? Text(
-                      nombreUsuario.isNotEmpty ? nombreUsuario[0] : 'U',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (nombreFamilia != null &&
+                      nombreFamilia.toString().isNotEmpty)
+                    Text(
+                      "Con la $nombreFamilia",
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  if (tiempo.isNotEmpty)
+                    Text(
+                      tiempo,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                ],
+              ),
+              trailing: esMiPost
+                  ? PopupMenuButton<String>(
+                      onSelected: (val) {
+                        if (val == 'delete') _deletePost(post['id_post']);
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text("Eliminar"),
+                            ],
+                          ),
+                        ),
+                      ],
                     )
-                  : null,
+                  : (theme != null
+                        ? Icon(theme.trailingIcon, color: theme.iconColor)
+                        : null),
             ),
-            title: Text(
-              nombreUsuario,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (nombreFamilia != null &&
-                    nombreFamilia.toString().isNotEmpty)
-                  Text(
-                    "Con la $nombreFamilia",
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                if (tiempo.isNotEmpty)
-                  Text(
-                    tiempo,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-              ],
-            ),
-            trailing: esMiPost
-                ? PopupMenuButton<String>(
-                    onSelected: (val) {
-                      if (val == 'delete') _deletePost(post['id_post']);
+            if (urlImagen != null &&
+                urlImagen.toString().isNotEmpty &&
+                urlImagen != 'null')
+              GestureDetector(
+                onTap: () {
+                  final imageUrl = _fixUrl(urlImagen);
+                  FullScreenImageViewer.open(
+                    context,
+                    imageProvider: NetworkImage(imageUrl),
+                    heroTag: 'post_image_${post['id_post']}',
+                  );
+                },
+                onDoubleTapDown: (details) {
+                  _lastDoubleTapDownDetails = details;
+                },
+                onDoubleTap: () {
+                  final details = _lastDoubleTapDownDetails;
+                  if (details != null) {
+                    _animateHeartOverlayToLike(index: index, details: details);
+                  } else {
+                    _toggleLike(index);
+                  }
+                },
+                child: Hero(
+                  tag: 'post_image_${post['id_post']}',
+                  child: Image.network(
+                    _fixUrl(urlImagen),
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    loadingBuilder: (ctx, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        height: 200,
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
                     },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
+                    errorBuilder: (context, error, stackTrace) {
+                      print("Error cargando imagen: $error");
+                      return Container(
+                        height: 150,
+                        width: double.infinity,
+                        color: Colors.grey[200],
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.delete, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text("Eliminar"),
+                            Icon(
+                              Icons.broken_image,
+                              color: Colors.grey,
+                              size: 50,
+                            ),
+                            Text(
+                              "Imagen no disponible",
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           ],
                         ),
-                      ),
-                    ],
-                  )
-                : (theme != null
-                      ? Icon(theme.trailingIcon, color: theme.iconColor)
-                      : null),
-          ),
-          if (urlImagen != null &&
-              urlImagen.toString().isNotEmpty &&
-              urlImagen != 'null')
-            GestureDetector(
-              onTap: () {
-                final imageUrl = _fixUrl(urlImagen);
-                FullScreenImageViewer.open(
-                  context,
-                  imageProvider: NetworkImage(imageUrl),
-                  heroTag: 'post_image_${post['id_post']}',
-                );
-              },
-              onDoubleTapDown: (details) {
-                _lastDoubleTapDownDetails = details;
-              },
-              onDoubleTap: () {
-                final details = _lastDoubleTapDownDetails;
-                if (details != null) {
-                  _animateHeartOverlayToLike(index: index, details: details);
-                } else {
-                  _toggleLike(index);
-                }
-              },
-              child: Hero(
-                tag: 'post_image_${post['id_post']}',
-                child: Image.network(
-                  _fixUrl(urlImagen),
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  loadingBuilder: (ctx, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      height: 200,
-                      color: Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    print("Error cargando imagen: $error");
-                    return Container(
-                      height: 150,
-                      width: double.infinity,
-                      color: Colors.grey[200],
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.broken_image,
-                            color: Colors.grey,
-                            size: 50,
-                          ),
-                          Text(
-                            "Imagen no disponible",
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          if (mensaje.isNotEmpty)
+            if (mensaje.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 10,
+                ),
+                child: Text(mensaje, style: const TextStyle(fontSize: 15)),
+              ),
+            const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 10,
+                horizontal: 8.0,
+                vertical: 4.0,
               ),
-              child: Text(mensaje, style: const TextStyle(fontSize: 15)),
-            ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            child: Row(
-              children: [
-                TextButton.icon(
-                  key: _getLikeButtonKey(post['id_post']),
-                  onPressed: () => _toggleLike(index),
-                  icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: isLiked ? Colors.red : Colors.grey[600],
-                  ),
-                  label: Text(
-                    likesCount > 0 ? "$likesCount Likes" : "Me gusta",
-                    style: TextStyle(
+              child: Row(
+                children: [
+                  TextButton.icon(
+                    key: _getLikeButtonKey(post['id_post']),
+                    onPressed: () => _toggleLike(index),
+                    icon: Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
                       color: isLiked ? Colors.red : Colors.grey[600],
                     ),
+                    label: Text(
+                      likesCount > 0 ? "$likesCount Likes" : "Me gusta",
+                      style: TextStyle(
+                        color: isLiked ? Colors.red : Colors.grey[600],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 15),
-                TextButton.icon(
-                  onPressed: () => _showCommentsModal(context, post['id_post']),
-                  icon: Icon(
-                    Icons.chat_bubble_outline,
-                    color: Colors.grey[600],
+                  const SizedBox(width: 15),
+                  TextButton.icon(
+                    onPressed: () =>
+                        _showCommentsModal(context, post['id_post']),
+                    icon: Icon(
+                      Icons.chat_bubble_outline,
+                      color: Colors.grey[600],
+                    ),
+                    label: Text(
+                      comentariosCount > 0
+                          ? "$comentariosCount Comentarios"
+                          : "Comentar",
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
                   ),
-                  label: Text(
-                    comentariosCount > 0
-                        ? "$comentariosCount Comentarios"
-                        : "Comentar",
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -1179,6 +1185,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
   final TextEditingController _commentCtrl = TextEditingController();
   List<dynamic> _comments = [];
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _nextPage = 1;
+
+  static const int _pageSize = 100;
 
   @override
   void initState() {
@@ -1186,19 +1197,63 @@ class _CommentsSheetState extends State<CommentsSheet> {
     _loadComments();
   }
 
-  Future<void> _loadComments() async {
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments({bool allPages = false}) async {
     try {
-      final res = await widget.http.getJson(
-        '/api/publicaciones/${widget.postId}/comentarios',
-      );
+      final loaded = <dynamic>[];
+      var page = 1;
+      var hasMore = false;
+      do {
+        final res = await widget.http.getJson(
+          '/api/publicaciones/${widget.postId}/comentarios',
+          query: {'page': page, 'limit': _pageSize},
+        );
+        if (res.statusCode >= 400) break;
+        final batch = List<dynamic>.from(jsonDecode(res.body));
+        loaded.addAll(batch);
+        hasMore = batch.length == _pageSize;
+        page++;
+      } while (allPages && hasMore);
+
       if (mounted) {
         setState(() {
-          _comments = jsonDecode(res.body);
+          _comments = loaded;
+          _nextPage = page;
+          _hasMore = hasMore;
           _loading = false;
         });
       }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMoreComments() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final res = await widget.http.getJson(
+        '/api/publicaciones/${widget.postId}/comentarios',
+        query: {'page': _nextPage, 'limit': _pageSize},
+      );
+      if (res.statusCode >= 400) return;
+      final batch = List<dynamic>.from(jsonDecode(res.body));
+      if (!mounted) return;
+      final knownIds = _comments.map((item) => item['id_comentario']).toSet();
+      setState(() {
+        _comments.addAll(
+          batch.where((item) => knownIds.add(item['id_comentario'])),
+        );
+        _nextPage++;
+        _hasMore = batch.length == _pageSize;
+      });
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -1211,7 +1266,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
         '/api/publicaciones/${widget.postId}/comentarios',
         data: {'contenido': text},
       );
-      _loadComments();
+      _loadComments(allPages: true);
     } catch (e) {
       print("Error enviando comentario: $e");
     }
@@ -1241,7 +1296,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
         await widget.http.deleteJson(
           '/api/publicaciones/comentarios/$commentId',
         );
-        _loadComments();
+        _loadComments(allPages: true);
       } catch (e) {
         print("Error al borrar: $e");
       }
@@ -1278,8 +1333,24 @@ class _CommentsSheetState extends State<CommentsSheet> {
                 : _comments.isEmpty
                 ? const Center(child: Text("Sé el primero en comentar 👇"))
                 : ListView.builder(
-                    itemCount: _comments.length,
+                    itemCount: _comments.length + (_hasMore ? 1 : 0),
                     itemBuilder: (ctx, i) {
+                      if (i == _comments.length) {
+                        return Center(
+                          child: TextButton.icon(
+                            onPressed: _loadingMore ? null : _loadMoreComments,
+                            icon: _loadingMore
+                                ? const SizedBox.square(
+                                    dimension: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.expand_more),
+                            label: const Text('Cargar más comentarios'),
+                          ),
+                        );
+                      }
                       final c = _comments[i];
                       final nombre = "${c['nombre']} ${c['apellido'] ?? ''}";
                       final soyDueno =
@@ -1388,13 +1459,13 @@ class _CommentsSheetState extends State<CommentsSheet> {
 //  Tema visual para posts especiales
 // ─────────────────────────────────────────────────────────────────────────────
 class _PostTheme {
-  final Color bgColor;        // Fondo de la tarjeta
-  final Color borderColor;    // Borde de la tarjeta
-  final Color bannerColor;    // Fondo del banner superior
-  final String bannerText;    // Texto del banner superior
-  final Color avatarColor;    // Color del avatar (sin foto)
-  final IconData trailingIcon;// Ícono que aparece arriba a la derecha
-  final Color iconColor;      // Color de ese ícono
+  final Color bgColor; // Fondo de la tarjeta
+  final Color borderColor; // Borde de la tarjeta
+  final Color bannerColor; // Fondo del banner superior
+  final String bannerText; // Texto del banner superior
+  final Color avatarColor; // Color del avatar (sin foto)
+  final IconData trailingIcon; // Ícono que aparece arriba a la derecha
+  final Color iconColor; // Color de ese ícono
 
   const _PostTheme({
     required this.bgColor,

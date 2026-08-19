@@ -53,8 +53,11 @@ class NotificacionesApi {
   final ApiHttp _http = ApiHttp();
 
   /// Lista todas las notificaciones del usuario autenticado.
-  Future<List<NotificacionItem>> list() async {
-    final res = await _http.getJson('/api/notificaciones');
+  Future<List<NotificacionItem>> list({int page = 1, int limit = 100}) async {
+    final res = await _http.getJson(
+      '/api/notificaciones',
+      query: {'page': page, 'limit': limit},
+    );
     if (res.statusCode >= 400) throw Exception(parseHttpError(res));
 
     final decoded = jsonDecode(res.body);
@@ -63,7 +66,9 @@ class NotificacionesApi {
         : (decoded is Map && decoded['data'] is List ? decoded['data'] : []);
 
     return raw
-        .map((j) => NotificacionItem.fromJson(Map<String, dynamic>.from(j as Map)))
+        .map(
+          (j) => NotificacionItem.fromJson(Map<String, dynamic>.from(j as Map)),
+        )
         .toList();
   }
 
@@ -72,7 +77,9 @@ class NotificacionesApi {
     final res = await _http.getJson('/api/notificaciones/no-leidas');
     if (res.statusCode >= 400) return 0;
     final decoded = jsonDecode(res.body);
-    final data = decoded is Map && decoded['data'] != null ? decoded['data'] : decoded;
+    final data = decoded is Map && decoded['data'] != null
+        ? decoded['data']
+        : decoded;
     return (data['total'] ?? 0) as int;
   }
 

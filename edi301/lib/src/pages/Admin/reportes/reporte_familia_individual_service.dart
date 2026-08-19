@@ -71,11 +71,11 @@ class ReporteFamiliaIndividualService {
     final eventosApi = EventosApi();
 
     final results = await Future.wait([
-      pubApi.getPostsFamilia(familia.id!, limit: 200),
-      eventosApi.listar(),
+      pubApi.getAllPostsFamilia(familia.id!),
+      eventosApi.listarTodos(),
     ]);
 
-    final posts = (results[0] as Map<String, dynamic>)['data'] as List? ?? [];
+    final posts = results[0];
     final eventos = results[1] as List<Evento>;
 
     final grouped = _groupPostsByEvent(posts, eventos);

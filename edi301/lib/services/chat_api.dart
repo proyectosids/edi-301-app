@@ -12,8 +12,15 @@ class ChatApi {
     return [];
   }
 
-  Future<List<dynamic>> getMessages(int idSala) async {
-    final res = await _http.getJson('/api/chat/$idSala/messages');
+  Future<List<dynamic>> getMessages(
+    int idSala, {
+    int limit = 100,
+    int? beforeId,
+  }) async {
+    final res = await _http.getJson(
+      '/api/chat/$idSala/messages',
+      query: {'limit': limit, if (beforeId != null) 'before_id': beforeId},
+    );
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     }

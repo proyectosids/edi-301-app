@@ -9,11 +9,12 @@ class ApiHttp extends http.BaseClient {
   static final ApiHttp _i = ApiHttp._internal();
   factory ApiHttp() => _i;
 
-  // dev
-  //static const String baseUrl = 'http://192.168.100.7:3000';
-
-  // prod
-  static const String baseUrl = 'https://edi301.apps.isdapps.uk';
+  /// Se puede reemplazar por ambiente al compilar:
+  /// flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://edi301.apps.isdapps.uk',
+  );
 
   final http.Client _inner = http.Client();
   final Duration _timeout = const Duration(seconds: 20);
@@ -60,9 +61,16 @@ class ApiHttp extends http.BaseClient {
   }
 
   Future<http.Response> getJson(String url, {Map<String, dynamic>? query}) {
-    final uri = _resolve(url).replace(
-      queryParameters: {...?query?.map((k, v) => MapEntry(k, v?.toString()))},
-    );
+    final resolved = _resolve(url);
+    final extraQuery = <String, String>{};
+    query?.forEach((key, value) {
+      if (value != null) extraQuery[key] = value.toString();
+    });
+    final uri = extraQuery.isEmpty
+        ? resolved
+        : resolved.replace(
+            queryParameters: {...resolved.queryParameters, ...extraQuery},
+          );
     return get(uri).timeout(_timeout);
   }
 
