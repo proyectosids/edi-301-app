@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/token_storage.dart';
@@ -54,6 +55,8 @@ class LoginController {
       final deviceInfo =
           '${Platform.operatingSystem} ${Platform.operatingSystemVersion}'
               .trim();
+      final prefs = await SharedPreferences.getInstance();
+      final deviceId = await _getOrCreateDeviceId(prefs);
 
       final res = await _http.postJson(
         '/api/auth/login',
@@ -62,6 +65,7 @@ class LoginController {
           'password': password,
           'platform': platform,
           'device_info': deviceInfo,
+          'device_id': deviceId,
         },
       );
 
@@ -85,6 +89,9 @@ class LoginController {
       if (token.isEmpty) throw Exception('No se recibió session_token');
 
       await _tokenStorage.save(token);
+      // ApiHttp usa SharedPreferences para adjuntar Authorization. Guardarlo
+      // antes de cualquier petición autenticada evita el fallo del primer login.
+      await prefs.setString('session_token', token);
 
       // Cargar datos extra (familia) si aplica
       final idUsuario = data['id_usuario'] ?? data['IdUsuario'];
@@ -106,8 +113,6 @@ class LoginController {
       }
 
       // Guardar sesión local
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('session_token', token);
       await prefs.setString('user', jsonEncode(data));
 
       // ✅ Registrar token FCM siempre en cada login
@@ -152,6 +157,19 @@ class LoginController {
     } finally {
       loading.value = false;
     }
+  }
+
+  Future<String> _getOrCreateDeviceId(SharedPreferences prefs) async {
+    const key = 'edi301_device_id';
+    final existing = prefs.getString(key);
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    final random = Random.secure();
+    final id = '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-'
+        '${random.nextInt(1 << 32).toRadixString(36)}-'
+        '${random.nextInt(1 << 32).toRadixString(36)}';
+    await prefs.setString(key, id);
+    return id;
   }
 
   /// Muestra el modal "Elige tu familia" si el registro previo dejó

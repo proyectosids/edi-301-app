@@ -11,7 +11,7 @@ import 'package:edi301/src/pages/Admin/admin_page.dart';
 import 'package:edi301/src/pages/Admin/agenda/agenda_page.dart';
 import 'package:edi301/src/pages/Chat/my_chats_page.dart';
 import 'package:edi301/src/pages/Family/chat_family_page.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:edi301/src/pages/Encuestas/encuestas_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,7 +33,6 @@ class _HomePageState extends State<HomePage> {
     _loadUserRole();
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _controller.init(context);
-      _verificarYMostrarEncuesta();
     });
   }
 
@@ -59,7 +58,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _verificarYMostrarEncuesta() async {
+  /* Future<void> _verificarYMostrarEncuesta() async {
     final prefs = await SharedPreferences.getInstance();
     final yaMostrada = prefs.getBool('encuesta_mostrada') ?? false;
     if (yaMostrada) return;
@@ -67,9 +66,9 @@ class _HomePageState extends State<HomePage> {
     openCount++;
     await prefs.setInt('app_open_count', openCount);
     if (openCount >= 2 && mounted) _mostrarDialogoEncuesta(context);
-  }
+  } */
 
-  void _mostrarDialogoEncuesta(BuildContext context) {
+  /* void _mostrarDialogoEncuesta(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -134,7 +133,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
+  } */
 
   Widget _getPageFromRoute(String route) {
     switch (route) {
@@ -152,6 +151,8 @@ class _HomePageState extends State<HomePage> {
         return const AdminPage();
       case 'perfil':
         return const PerfilPage();
+      case 'encuestas':
+        return const EncuestasPage();
       default:
         return const Center(child: Text('Página no encontrada'));
     }
@@ -164,6 +165,7 @@ class _HomePageState extends State<HomePage> {
       {'ruta': 'family', 'icon': Icons.family_restroom, 'label': 'Familia'},
       {'ruta': 'search', 'icon': Icons.person_search, 'label': 'Buscar'},
       {'ruta': 'agenda', 'icon': Icons.calendar_month, 'label': 'Agenda'},
+      {'ruta': 'encuestas', 'icon': Icons.poll, 'label': 'Encuestas'},
       {'ruta': 'admin', 'icon': Icons.admin_panel_settings, 'label': 'Admin'},
       {'ruta': 'perfil', 'icon': Icons.person, 'label': 'Perfil'},
     ];
@@ -212,7 +214,8 @@ class _HomePageState extends State<HomePage> {
     int unreadChats,
     int unreadFamily,
   ) {
-    final hasUnread = (ruta == 'chat' && unreadChats > 0) ||
+    final hasUnread =
+        (ruta == 'chat' && unreadChats > 0) ||
         (ruta == 'family' && unreadFamily > 0);
     if (!hasUnread) return Icon(icon);
     return Stack(
@@ -262,7 +265,9 @@ class _HomePageState extends State<HomePage> {
                         controller: _pageCtrl,
                         onPageChanged: _onPageChanged,
                         children: _menuOptions
-                            .map((op) => _getPageFromRoute(op['ruta'] as String))
+                            .map(
+                              (op) => _getPageFromRoute(op['ruta'] as String),
+                            )
                             .toList(),
                       ),
                     ),
@@ -305,13 +310,15 @@ class _HomePageState extends State<HomePage> {
                         selectedLabelTextStyle: const TextStyle(
                           color: Color.fromRGBO(245, 188, 6, 1),
                         ),
-                        unselectedLabelTextStyle:
-                            const TextStyle(color: Colors.white),
+                        unselectedLabelTextStyle: const TextStyle(
+                          color: Colors.white,
+                        ),
                         selectedIconTheme: const IconThemeData(
                           color: Color.fromRGBO(245, 188, 6, 1),
                         ),
-                        unselectedIconTheme:
-                            const IconThemeData(color: Colors.white),
+                        unselectedIconTheme: const IconThemeData(
+                          color: Colors.white,
+                        ),
                         destinations: _menuOptions.map((op) {
                           final ruta = op['ruta'] as String;
                           return NavigationRailDestination(

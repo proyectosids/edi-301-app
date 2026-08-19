@@ -38,6 +38,29 @@ import 'package:edi301/src/pages/Admin/configuracion/limite_hijos_edi_page.dart'
 import 'package:edi301/src/pages/Perfil/renovaciones/mis_renovaciones_page.dart';
 import 'package:edi301/services/socket_service.dart';
 import 'package:edi301/services/users_api.dart';
+import 'package:edi301/src/pages/Encuestas/encuestas_page.dart';
+import 'package:edi301/services/encuestas_api.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> _openSurveyFromNotification(Map<String, dynamic> data) async {
+  if (data['tipo'] != 'ENCUESTA') return;
+  final id = int.tryParse('${data['id_encuesta'] ?? ''}');
+  if (id == null) return;
+  try {
+    final survey = await EncuestasApi().get(id);
+    final context = appNavigatorKey.currentContext;
+    if (context == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ResponderEncuestaPage(encuesta: survey),
+      ),
+    );
+  } catch (e) {
+    final context = appNavigatorKey.currentContext;
+    if (context != null) Navigator.of(context).pushNamed('encuestas');
+  }
+}
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -126,6 +149,12 @@ void main() async {
 
   final notiService = NotificationService();
   await notiService.init();
+  notiService.onNotificationTap = (payload) {
+    if (payload == null) return;
+    try {
+      _openSurveyFromNotification(jsonDecode(payload) as Map<String, dynamic>);
+    } catch (_) {}
+  };
   await notiService.requestPermissions();
 
   // Foreground: mostrar notificación local cuando la app está abierta
@@ -143,7 +172,7 @@ void main() async {
         id: notifId,
         title: notification.title ?? 'Sin título',
         body: notification.body ?? '',
-        payload: message.data['tipo'] ?? 'GENERAL',
+        payload: jsonEncode(message.data),
       );
     } else {
       // Mensaje "data-only" (sin notification block): construir aviso manual
@@ -156,7 +185,7 @@ void main() async {
           id: notifId,
           title: title,
           body: body,
-          payload: message.data['tipo'] ?? 'GENERAL',
+          payload: jsonEncode(message.data),
         );
       }
     }
@@ -176,6 +205,15 @@ void main() async {
   HttpOverrides.global = MyHttpOverrides();
 
   runApp(MyApp(initialRoute: initialRoute));
+  FirebaseMessaging.onMessageOpenedApp.listen(
+    (message) => _openSurveyFromNotification(message.data),
+  );
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _openSurveyFromNotification(initialMessage.data),
+    );
+  }
 }
 
 class MyHttpOverrides extends HttpOverrides {
@@ -195,6 +233,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'EDI 301',
       theme: ThemeData(
@@ -243,6 +282,7 @@ class MyApp extends StatelessWidget {
         'renovaciones_admin': (context) => const RenovacionesAdminPage(),
         'limite_hijos_edi': (context) => const LimiteHijosEdiPage(),
         'mis_renovaciones': (context) => const MisRenovacionesPage(),
+        'encuestas': (context) => const EncuestasPage(),
       },
     );
   }

@@ -11,6 +11,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   NotificationService._internal();
+  void Function(String? payload)? onNotificationTap;
 
   // ✅ Canal nuevo (si el anterior quedó con baja importancia, este lo "resetea")
   static const String _channelId = 'edi301_high_v1';
@@ -39,7 +40,9 @@ class NotificationService {
 
     await _notifications.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {},
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        onNotificationTap?.call(response.payload);
+      },
     );
 
     // ✅ Crear canal en Android con importancia MAX (heads-up)
