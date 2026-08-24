@@ -2,6 +2,7 @@ import 'package:edi301/src/widgets/responsive_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:edi301/src/pages/Admin/get_family/get_family_controller.dart';
+import 'package:edi301/src/pages/Admin/get_family/family_filter_sheet.dart';
 import 'package:edi301/src/pages/Admin/reportes/reporte_familias_service.dart';
 import 'package:html_unescape/html_unescape.dart';
 
@@ -44,8 +45,11 @@ class _ReportesPageState extends State<ReportesPage> {
   Future<void> _generarReporteGeneral() async {
     setState(() => _isLoadingGeneral = true);
     try {
-      // ignore: unused_local_variable
-      final path = await _reportService.generarReporteGeneral();
+      final familyIds = _controller.families.value
+          .map((family) => int.tryParse('${family['id_familia']}'))
+          .whereType<int>()
+          .toSet();
+      await _reportService.generarReporteGeneral(familyIds: familyIds);
       if (mounted) {
         _snack('Reporte general guardado y abierto.', isError: false);
       }
@@ -130,7 +134,7 @@ class _ReportesPageState extends State<ReportesPage> {
 
               const Divider(thickness: 2),
 
-              _textFieldSearch(),
+              _searchAndFilters(),
 
               Expanded(
                 child: ValueListenableBuilder<bool>(
@@ -160,37 +164,57 @@ class _ReportesPageState extends State<ReportesPage> {
     );
   }
 
-  Widget _textFieldSearch() {
+  Widget _searchAndFilters() {
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 10, 10, 20),
-      child: TextField(
-        controller: _searchCtrl,
-
-        onChanged: _controller.onSearchChanged,
-        decoration: InputDecoration(
-          hintText: 'Buscar familia por nombre o padres...',
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: const BorderSide(color: Color.fromRGBO(245, 188, 6, 1)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: const BorderSide(
-              color: Color.fromRGBO(245, 188, 6, 1),
-              width: 2,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: _controller.onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Buscar familia por nombre o padres...',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(
+                    color: Color.fromRGBO(245, 188, 6, 1),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(
+                    color: Color.fromRGBO(245, 188, 6, 1),
+                    width: 2,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 15,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Color.fromRGBO(19, 67, 107, 1),
+                ),
+              ),
             ),
           ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 15,
+          const SizedBox(width: 8),
+          Badge(
+            isLabelVisible: _controller.activeFilterCount > 0,
+            label: Text('${_controller.activeFilterCount}'),
+            child: IconButton.filledTonal(
+              tooltip: 'Filtrar familias',
+              icon: const Icon(Icons.filter_alt_outlined),
+              onPressed: () async {
+                await showFamilyFilters(context, _controller);
+                if (mounted) setState(() {});
+              },
+            ),
           ),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: Color.fromRGBO(19, 67, 107, 1),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -218,11 +242,21 @@ class _ReportesPageState extends State<ReportesPage> {
               (f['nombre_familia'] ?? 'Sin Nombre').toString(),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text(
-              unescape.convert(
-                (f['padres'] ?? 'Sin padres asignados').toString(),
-              ),
-              style: const TextStyle(color: Colors.black87),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                FamilyResidenceBadge(
+                  residence: f['tipo_residencia'] ?? f['residencia'],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  unescape.convert(
+                    (f['padres'] ?? 'Sin padres asignados').toString(),
+                  ),
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ],
             ),
             isThreeLine: true,
             trailing: isLoading

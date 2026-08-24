@@ -1,6 +1,7 @@
 import 'package:edi301/core/api_client_http.dart';
 import 'package:edi301/services/familia_api.dart';
 import 'package:edi301/src/pages/Admin/get_family/get_family_controller.dart';
+import 'package:edi301/src/pages/Admin/get_family/family_filter_sheet.dart';
 import 'package:edi301/src/widgets/responsive_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -16,6 +17,8 @@ class GetFamilyPage extends StatefulWidget {
 
 class _GetFamilyPageState extends State<GetFamilyPage> {
   static const _navy = Color.fromRGBO(19, 67, 107, 1);
+  static const _defaultFamilyImage =
+      'assets/img/familia-extensa-e1591818033557.jpg';
 
   final GetFamilyController _controller = GetFamilyController();
   final FamiliaApi _familiaApi = FamiliaApi();
@@ -27,6 +30,8 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
   List<dynamic> _inactiveFamilies = [];
   List<dynamic> _filteredInactive = [];
   bool _loadingInactive = false;
+  final Set<int> _reactivatingIds = <int>{};
+  int? _openingFamilyId;
 
   @override
   void initState() {
@@ -81,6 +86,7 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
 
   Future<void> _reactivate(dynamic f) async {
     final id = f['id_familia'] as int;
+    if (_reactivatingIds.contains(id)) return;
     final nombre = (f['nombre_familia'] ?? 'esta familia').toString();
 
     final confirmed = await showDialog<bool>(
@@ -107,6 +113,7 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
     );
     if (confirmed != true || !mounted) return;
 
+    setState(() => _reactivatingIds.add(id));
     try {
       await _familiaApi.reactivateFamily(id);
       if (!mounted) return;
@@ -129,6 +136,8 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
           ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _reactivatingIds.remove(id));
     }
   }
 
@@ -138,12 +147,13 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
     if (s.startsWith('http')) return s;
     s = s.replaceAll('\\', '/');
     final idxPublic = s.indexOf('public/uploads/');
-    if (idxPublic != -1)
+    if (idxPublic != -1) {
       s = s.substring(idxPublic + 'public'.length);
-    else if (s.startsWith('uploads/'))
+    } else if (s.startsWith('uploads/')) {
       s = '/$s';
-    else if (!s.startsWith('/'))
+    } else if (!s.startsWith('/')) {
       s = '/$s';
+    }
     return '${ApiHttp.baseUrl}$s';
   }
 
@@ -221,6 +231,25 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                               _loadInactive();
                             }
                           },
+                        ),
+                        const Spacer(),
+                        OutlinedButton.icon(
+                          onPressed: _showInactive
+                              ? null
+                              : () async {
+                                  await showFamilyFilters(context, _controller);
+                                  if (mounted) setState(() {});
+                                },
+                          icon: const Icon(Icons.filter_alt_outlined, size: 18),
+                          label: Text(
+                            _controller.activeFilterCount == 0
+                                ? 'Filtros'
+                                : 'Filtros (${_controller.activeFilterCount})',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70),
+                          ),
                         ),
                       ],
                     ),
@@ -322,6 +351,7 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
 
   // ── Card familia activa ───────────────────────────────────────────────────
   Widget _buildFamilyCard(dynamic f) {
+    final familyId = _asInt(f['id_familia'], fallback: 0);
     final numAlumnos = _asInt(f['num_alumnos'], fallback: 0);
     final limiteHijosEdi = _asInt(f['limite_hijos_edi']);
     final bool estaLleno = numAlumnos >= limiteHijosEdi;
@@ -335,7 +365,16 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _controller.goToDetail(f),
+        onTap: _openingFamilyId != null
+            ? null
+            : () async {
+                setState(() => _openingFamilyId = familyId);
+                try {
+                  await _controller.goToDetail(f);
+                } finally {
+                  if (mounted) setState(() => _openingFamilyId = null);
+                }
+              },
         child: Column(
           children: [
             Stack(
@@ -347,23 +386,12 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                       ? Image.network(
                           portadaAbs,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(
-                              Icons.broken_image,
-                              color: Colors.grey,
-                              size: 50,
-                            ),
+                          errorBuilder: (_, __, ___) => Image.asset(
+                            _defaultFamilyImage,
+                            fit: BoxFit.cover,
                           ),
                         )
-                      : Container(
-                          color: const Color.fromRGBO(19, 67, 107, 0.2),
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey,
-                            size: 50,
-                          ),
-                        ),
+                      : Image.asset(_defaultFamilyImage, fit: BoxFit.cover),
                 ),
                 if (estaLleno)
                   Container(
@@ -411,6 +439,11 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      FamilyResidenceBadge(
+                        residence: f['tipo_residencia'] ?? f['residencia'],
+                      ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -531,23 +564,12 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                       ? Image.network(
                           portadaAbs,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(
-                              Icons.broken_image,
-                              color: Colors.grey,
-                              size: 40,
-                            ),
+                          errorBuilder: (_, __, ___) => Image.asset(
+                            _defaultFamilyImage,
+                            fit: BoxFit.cover,
                           ),
                         )
-                      : Container(
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey,
-                            size: 40,
-                          ),
-                        ),
+                      : Image.asset(_defaultFamilyImage, fit: BoxFit.cover),
                 ),
               ),
               Container(
@@ -633,10 +655,17 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.restore, size: 16),
-                  label: const Text(
-                    'Reactivar',
-                    style: TextStyle(fontSize: 12),
+                  icon: _reactivatingIds.contains(f['id_familia'])
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.restore, size: 16),
+                  label: Text(
+                    _reactivatingIds.contains(f['id_familia'])
+                        ? 'Procesando...'
+                        : 'Reactivar',
+                    style: const TextStyle(fontSize: 12),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
@@ -649,7 +678,9 @@ class _GetFamilyPageState extends State<GetFamilyPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: () => _reactivate(f),
+                  onPressed: _reactivatingIds.contains(f['id_familia'])
+                      ? null
+                      : () => _reactivate(f),
                 ),
               ],
             ),

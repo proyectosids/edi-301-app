@@ -25,6 +25,7 @@ class _ChatPageState extends State<ChatPage> {
   bool _loading = true;
   bool _loadingOlder = false;
   bool _hasOlder = false;
+  bool _sending = false;
   int? _myId;
 
   static const int _pageSize = 100;
@@ -184,9 +185,9 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  void _sendMessage() async {
+  Future<void> _sendMessage() async {
     final text = _msgCtrl.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _sending) return;
 
     _msgCtrl.clear();
     final tempId = -DateTime.now().millisecondsSinceEpoch;
@@ -196,32 +197,56 @@ class _ChatPageState extends State<ChatPage> {
       'mensaje': text,
       'es_mio': 1,
       '_temp': true,
+      'created_at': DateTime.now().toIso8601String(),
     };
 
     setState(() {
+      _sending = true;
       _mensajes.add(tempMsg);
       _scrollToBottom();
     });
 
-    // Petición HTTP (El backend enviará la Push de Firebase automáticamente)
-    final success = await _api.sendMessage(widget.idSala, text);
-    // Marcar la sala como leída después de enviar (el mensaje es mío, ya lo "vi")
-    _api.markAsRead(widget.idSala);
+    try {
+      final success = await _api.sendMessage(widget.idSala, text);
+      _api.markAsRead(widget.idSala);
 
-    if (success) {
-      if (mounted) {
-        setState(() => _mensajes.removeWhere((m) => m['id_mensaje'] == tempId));
+      if (success) {
+        if (mounted) {
+          setState(
+            () => _mensajes.removeWhere((m) => m['id_mensaje'] == tempId),
+          );
+        }
+        _loadMessages(isPolling: true);
+      } else {
+        _showSendError(tempId);
       }
-      // Refrescamos inmediatamente para confirmar el mensaje
-      _loadMessages(isPolling: true);
-    } else {
-      if (mounted) {
-        setState(() => _mensajes.removeWhere((m) => m['id_mensaje'] == tempId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error al enviar mensaje")),
-        );
-      }
+    } catch (_) {
+      _showSendError(tempId);
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
+  }
+
+  void _showSendError(int tempId) {
+    if (!mounted) return;
+    setState(() => _mensajes.removeWhere((m) => m['id_mensaje'] == tempId));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Error al enviar mensaje')));
+  }
+
+  String _formatMessageDateTime(dynamic raw) {
+    if (raw == null || raw.toString().isEmpty) return '';
+    final value = raw.toString();
+    final normalized =
+        (value.endsWith('Z') || value.contains('+') || value.contains('-', 11))
+        ? value
+        : '${value}Z';
+    final date = DateTime.tryParse(normalized)?.toLocal();
+    if (date == null) return '';
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${two(date.day)}/${two(date.month)}/${date.year} '
+        '${two(date.hour)}:${two(date.minute)}';
   }
 
   void _scrollToBottom() {
@@ -324,17 +349,26 @@ class _ChatPageState extends State<ChatPage> {
                                   (msg['mensaje'] ?? '').toString(),
                                   style: const TextStyle(fontSize: 16),
                                 ),
-                                if (msg['_temp'] == true)
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 2),
-                                    child: Text(
-                                      'Enviando...',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.black54,
-                                      ),
+                                const SizedBox(height: 3),
+                                Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: Text(
+                                    [
+                                          _formatMessageDateTime(
+                                            msg['created_at'] ??
+                                                msg['fecha_envio'],
+                                          ),
+                                          if (msg['_temp'] == true)
+                                            'Enviando...',
+                                        ]
+                                        .where((value) => value.isNotEmpty)
+                                        .join(' · '),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black54,
                                     ),
                                   ),
+                                ),
                               ],
                             ),
                           ),
@@ -354,7 +388,10 @@ class _ChatPageState extends State<ChatPage> {
                     child: TextField(
                       controller: _msgCtrl,
                       textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
+                      enabled: !_sending,
+                      onSubmitted: (_) {
+                        if (!_sending) _sendMessage();
+                      },
                       decoration: InputDecoration(
                         hintText: "Escribe un mensaje...",
                         contentPadding: const EdgeInsets.symmetric(
@@ -373,12 +410,20 @@ class _ChatPageState extends State<ChatPage> {
                   CircleAvatar(
                     backgroundColor: const Color.fromRGBO(19, 67, 107, 1),
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.send,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: _sendMessage,
+                      icon: _sending
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.send,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                      onPressed: _sending ? null : _sendMessage,
                     ),
                   ),
                 ],

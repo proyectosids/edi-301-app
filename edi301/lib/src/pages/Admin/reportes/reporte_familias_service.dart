@@ -11,13 +11,15 @@ import 'package:edi301/services/familia_api.dart';
 import 'package:edi301/models/family_model.dart';
 
 class FamiliaReporteGeneral {
+  final int idFamilia;
   final String nombreFamilia;
   final String? papaNombre;
   final String? mamaNombre;
   final int totalMiembros;
 
   FamiliaReporteGeneral.fromJson(Map<String, dynamic> j)
-    : nombreFamilia = j['nombre_familia'],
+    : idFamilia = int.tryParse('${j['id_familia']}') ?? 0,
+      nombreFamilia = j['nombre_familia'],
       papaNombre = j['papa_nombre'],
       mamaNombre = j['mama_nombre'],
       totalMiembros = j['total_miembros'];
@@ -65,8 +67,13 @@ class ReporteFamiliasService {
     return Family.fromJson(data);
   }
 
-  Future<String> generarReporteGeneral() async {
-    final familias = await _fetchReporteGeneralData();
+  Future<String> generarReporteGeneral({Set<int>? familyIds}) async {
+    final allFamilies = await _fetchReporteGeneralData();
+    final familias = familyIds == null
+        ? allFamilies
+        : allFamilies
+              .where((family) => familyIds.contains(family.idFamilia))
+              .toList();
     final pdf = pw.Document();
     final font = await _getFont();
     final theme = pw.ThemeData.withFont(base: font);
@@ -275,11 +282,9 @@ class ReporteFamiliasService {
   pw.Widget _buildTableNinosHogar(List<HogarChild> ninos) {
     final headers = ['Nombre', 'Apellido', 'Fecha de nacimiento'];
 
-    final data = ninos.map((h) => [
-      h.nombre,
-      h.apellido,
-      h.fechaNacimiento ?? 'N/A',
-    ]).toList();
+    final data = ninos
+        .map((h) => [h.nombre, h.apellido, h.fechaNacimiento ?? 'N/A'])
+        .toList();
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,

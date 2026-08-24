@@ -35,6 +35,7 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
   bool _loading = true; // ✅ Control de carga inicial
   bool _loadingOlder = false;
   bool _hasOlder = false;
+  bool _sending = false;
 
   static const int _pageSize = 100;
 
@@ -189,18 +190,27 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
 
   Future<void> _enviar() async {
     final texto = _textController.text.trim();
-    if (texto.isEmpty) return;
+    if (texto.isEmpty || _sending) return;
 
     _textController.clear();
-
-    // ✅ Optimismo: Refrescamos inmediatamente después de enviar con éxito
-    final exito = await _api.enviarMensaje(widget.idFamilia, texto);
-    if (exito) {
-      _cargarMensajes(quiet: true);
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Error al enviar mensaje")));
+    setState(() => _sending = true);
+    try {
+      final exito = await _api.enviarMensaje(widget.idFamilia, texto);
+      if (exito) {
+        _cargarMensajes(quiet: true);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al enviar mensaje')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al enviar mensaje')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -292,8 +302,13 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
                   Expanded(
                     child: TextField(
                       controller: _textController,
+                      enabled: !_sending,
                       minLines: 1,
                       maxLines: 4,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) {
+                        if (!_sending) _enviar();
+                      },
                       decoration: InputDecoration(
                         hintText: "Escribe un mensaje...",
                         contentPadding: const EdgeInsets.symmetric(
@@ -314,12 +329,20 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
                     backgroundColor: const Color.fromRGBO(19, 67, 107, 1),
                     radius: 24,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.send,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: _enviar,
+                      icon: _sending
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.send,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                      onPressed: _sending ? null : _enviar,
                     ),
                   ),
                 ],
@@ -331,7 +354,7 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
     );
   }
 
-  /// Convierte un timestamp del servidor (con o sin 'Z') a hora local HH:mm.
+  /// Convierte el timestamp del servidor a fecha y hora local.
   String _formatMsgTime(String? raw) {
     if (raw == null || raw.isEmpty) return '';
     final str =
@@ -340,7 +363,9 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
         : '${raw}Z';
     final dt = DateTime.tryParse(str)?.toLocal();
     if (dt == null) return '';
-    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)}/${dt.year} '
+        '${two(dt.hour)}:${two(dt.minute)}';
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> msg, bool esMio) {

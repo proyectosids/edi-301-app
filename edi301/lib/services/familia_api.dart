@@ -10,6 +10,8 @@ import 'package:http/http.dart' as http;
 class FamiliaApi {
   final ApiHttp _http = ApiHttp();
   final String _baseUrl = ApiHttp.baseUrl;
+  static List<dynamic>? _availableCache;
+  static String? _availableEtag;
 
   String _normalizeResidence(String r) {
     final s = r.trim().toUpperCase();
@@ -186,14 +188,31 @@ class FamiliaApi {
   }
 
   Future<List<dynamic>?> getAvailable() async {
-    final res = await _http.getJson('/api/familias/available');
-    print('DEBUG BODY: ${res.body}');
-    if (res.statusCode == 200) {
-      final decoded = jsonDecode(res.body);
-      if (decoded is List) return decoded;
-      if (decoded is Map && decoded.containsKey('data')) return decoded['data'];
+    try {
+      final res = await _http.getJson(
+        '/api/familias/available',
+        headers: {if (_availableEtag != null) 'If-None-Match': _availableEtag!},
+      );
+      if (res.statusCode == 304 && _availableCache != null) {
+        return List<dynamic>.from(_availableCache!);
+      }
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final list = decoded is List
+            ? List<dynamic>.from(decoded)
+            : decoded is Map && decoded['data'] is List
+            ? List<dynamic>.from(decoded['data'])
+            : <dynamic>[];
+        _availableCache = list;
+        _availableEtag = res.headers['etag'];
+        return List<dynamic>.from(list);
+      }
+      if (_availableCache != null) return List<dynamic>.from(_availableCache!);
+      throw Exception(parseHttpError(res));
+    } catch (_) {
+      if (_availableCache != null) return List<dynamic>.from(_availableCache!);
+      rethrow;
     }
-    return [];
   }
 
   /// Lista familias desactivadas (activo = 0)

@@ -60,7 +60,11 @@ class ApiHttp extends http.BaseClient {
     return _inner.send(request).timeout(_timeout);
   }
 
-  Future<http.Response> getJson(String url, {Map<String, dynamic>? query}) {
+  Future<http.Response> getJson(
+    String url, {
+    Map<String, dynamic>? query,
+    Map<String, String>? headers,
+  }) {
     final resolved = _resolve(url);
     final extraQuery = <String, String>{};
     query?.forEach((key, value) {
@@ -71,7 +75,7 @@ class ApiHttp extends http.BaseClient {
         : resolved.replace(
             queryParameters: {...resolved.queryParameters, ...extraQuery},
           );
-    return get(uri).timeout(_timeout);
+    return get(uri, headers: headers).timeout(_timeout);
   }
 
   Future<http.Response> postJson(String url, {Object? data}) {

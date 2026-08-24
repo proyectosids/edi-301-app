@@ -23,6 +23,8 @@ class FamiliyPage extends StatefulWidget {
 }
 
 class _FamilyPageState extends State<FamiliyPage> {
+  static const _defaultFamilyImage =
+      'assets/img/familia-extensa-e1591818033557.jpg';
   final unescape = HtmlUnescape();
   int _tab = 0; // 0 = Mi familia, 1 = Fotos, 2 = Cumpleaños
   final FamilyController _controller = FamilyController();
@@ -355,9 +357,9 @@ class _FamilyPageState extends State<FamiliyPage> {
                           ? NetworkImage(coverAbs)
                           : null;
 
-                      final ImageProvider? profileImage = profileAbs.isNotEmpty
+                      final ImageProvider profileImage = profileAbs.isNotEmpty
                           ? NetworkImage(profileAbs)
-                          : null;
+                          : const AssetImage(_defaultFamilyImage);
 
                       return SingleChildScrollView(
                         child: Column(
@@ -714,24 +716,18 @@ class _FamilyPageState extends State<FamiliyPage> {
                                         height: 150,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (c, e, s) => Container(
+                                        errorBuilder: (c, e, s) => Image.asset(
+                                          _defaultFamilyImage,
                                           width: double.infinity,
                                           height: 150,
-                                          color: Colors.grey[300],
-                                          alignment: Alignment.center,
-                                          child: const Icon(
-                                            Icons.image_not_supported,
-                                          ),
+                                          fit: BoxFit.cover,
                                         ),
                                       )
-                                    : Container(
+                                    : Image.asset(
+                                        _defaultFamilyImage,
                                         width: double.infinity,
                                         height: 150,
-                                        color: Colors.grey[300],
-                                        alignment: Alignment.center,
-                                        child: const Icon(
-                                          Icons.image_not_supported,
-                                        ),
+                                        fit: BoxFit.cover,
                                       ),
                               ),
                               if (estaLleno)
@@ -1730,15 +1726,11 @@ class _SafeImage extends StatelessWidget {
   });
 
   Widget _placeholder() {
-    return Container(
+    return Image.asset(
+      _FamilyPageState._defaultFamilyImage,
       width: width,
       height: height,
-      color: const Color.fromRGBO(19, 67, 107, 0.08),
-      child: const Icon(
-        Icons.family_restroom,
-        size: 40,
-        color: Color.fromRGBO(19, 67, 107, 0.4),
-      ),
+      fit: BoxFit.cover,
     );
   }
 
