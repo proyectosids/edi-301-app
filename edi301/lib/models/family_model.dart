@@ -101,6 +101,7 @@ class Family {
   final String? descripcion;
   final String? fotoPortadaUrl;
   final String? fotoPerfilUrl;
+  final bool cerradaManualmente;
   final List<FamilyMember> assignedStudents;
   final List<FamilyMember> householdChildren;
   final List<HogarChild> hogarChildren;
@@ -126,6 +127,7 @@ class Family {
     this.descripcion,
     this.fotoPortadaUrl,
     this.fotoPerfilUrl,
+    this.cerradaManualmente = false,
     this.assignedStudents = const [],
     this.householdChildren = const [],
     this.hogarChildren = const [],
@@ -163,6 +165,13 @@ class Family {
       return s;
     }
 
+    bool asBool(dynamic value) {
+      return value == true ||
+          value == 1 ||
+          value?.toString() == '1' ||
+          value?.toString().toLowerCase() == 'true';
+    }
+
     final List<FamilyMember> householdChildren = [];
     final List<FamilyMember> assignedStudents = [];
     final List<FamilyMember> uncles = [];
@@ -171,9 +180,12 @@ class Family {
       for (final miembro in (j['miembros'] as List)) {
         if (miembro is Map<String, dynamic>) {
           final familyMember = FamilyMember.fromJson(miembro);
-          if (familyMember.tipoMiembro == 'HIJO') {
+          final rol = (miembro['nombre_rol'] ?? '').toString();
+          if (rol == 'HijoSanguineo' ||
+              (rol != 'HijoEDI' && familyMember.tipoMiembro == 'HIJO')) {
             householdChildren.add(familyMember);
-          } else if (familyMember.tipoMiembro == 'ALUMNO_ASIGNADO') {
+          } else if (rol == 'HijoEDI' ||
+              familyMember.tipoMiembro == 'ALUMNO_ASIGNADO') {
             assignedStudents.add(familyMember);
           } else if (familyMember.tipoMiembro == 'TIO_EDI') {
             uncles.add(familyMember);
@@ -215,6 +227,7 @@ class Family {
       descripcion: (j['descripcion'] ?? j['Descripcion'])?.toString(),
       fotoPortadaUrl: j['foto_portada_url']?.toString(),
       fotoPerfilUrl: j['foto_perfil_url']?.toString(),
+      cerradaManualmente: asBool(j['cerrada_manualmente']),
       householdChildren: householdChildren,
       assignedStudents: assignedStudents,
       hogarChildren: hogarChildren,
@@ -249,6 +262,7 @@ class Family {
     'madre': motherName,
     'residencia': residencia,
     'direccion': direccion,
+    'cerrada_manualmente': cerradaManualmente,
 
     'papa_id': fatherEmployeeId,
     'mama_id': motherEmployeeId,
@@ -264,6 +278,7 @@ class Family {
     String? descripcion,
     String? fotoPortadaUrl,
     String? fotoPerfilUrl,
+    bool? cerradaManualmente,
     List<FamilyMember>? assignedStudents,
     List<FamilyMember>? householdChildren,
     List<FamilyMember>? uncles,
@@ -282,6 +297,7 @@ class Family {
       descripcion: descripcion ?? this.descripcion,
       fotoPortadaUrl: fotoPortadaUrl ?? this.fotoPortadaUrl,
       fotoPerfilUrl: fotoPerfilUrl ?? this.fotoPerfilUrl,
+      cerradaManualmente: cerradaManualmente ?? this.cerradaManualmente,
       assignedStudents: assignedStudents ?? this.assignedStudents,
       householdChildren: householdChildren ?? this.householdChildren,
       uncles: uncles ?? this.uncles,

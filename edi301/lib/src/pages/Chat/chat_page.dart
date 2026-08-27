@@ -197,7 +197,7 @@ class _ChatPageState extends State<ChatPage> {
       'mensaje': text,
       'es_mio': 1,
       '_temp': true,
-      'created_at': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toUtc().toIso8601String(),
     };
 
     setState(() {
@@ -311,65 +311,74 @@ class _ChatPageState extends State<ChatPage> {
                           alignment: esMio
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 5),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 15,
-                              vertical: 10,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.75,
                             ),
-                            decoration: BoxDecoration(
-                              color: esMio
-                                  ? const Color.fromRGBO(245, 188, 6, 1)
-                                  : Colors.grey[300],
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(15),
-                                topRight: const Radius.circular(15),
-                                bottomLeft: esMio
-                                    ? const Radius.circular(15)
-                                    : Radius.zero,
-                                bottomRight: esMio
-                                    ? Radius.zero
-                                    : const Radius.circular(15),
+                            child: IntrinsicWidth(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 15,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: esMio
+                                      ? const Color.fromRGBO(245, 188, 6, 1)
+                                      : Colors.grey[300],
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(15),
+                                    topRight: const Radius.circular(15),
+                                    bottomLeft: esMio
+                                        ? const Radius.circular(15)
+                                        : Radius.zero,
+                                    bottomRight: esMio
+                                        ? Radius.zero
+                                        : const Radius.circular(15),
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (!esMio)
+                                      Text(
+                                        (msg['nombre_remitente'] ?? 'Usuario')
+                                            .toString(),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    Text(
+                                      (msg['mensaje'] ?? '').toString(),
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: Text(
+                                        [
+                                              _formatMessageDateTime(
+                                                msg['created_at'] ??
+                                                    msg['fecha_envio'],
+                                              ),
+                                              if (msg['_temp'] == true)
+                                                'Enviando...',
+                                            ]
+                                            .where((value) => value.isNotEmpty)
+                                            .join(' · '),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (!esMio)
-                                  Text(
-                                    (msg['nombre_remitente'] ?? 'Usuario')
-                                        .toString(),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                Text(
-                                  (msg['mensaje'] ?? '').toString(),
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(height: 3),
-                                Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Text(
-                                    [
-                                          _formatMessageDateTime(
-                                            msg['created_at'] ??
-                                                msg['fecha_envio'],
-                                          ),
-                                          if (msg['_temp'] == true)
-                                            'Enviando...',
-                                        ]
-                                        .where((value) => value.isNotEmpty)
-                                        .join(' · '),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         );

@@ -35,6 +35,7 @@ class _FamilyPageState extends State<FamiliyPage> {
 
   String _userRole = '';
   int? _userId;
+  String _availabilityFilter = 'TODAS';
 
   Offset _chatFabOffset = const Offset(
     300,
@@ -48,6 +49,13 @@ class _FamilyPageState extends State<FamiliyPage> {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse('$value') ?? fallback;
+  }
+
+  bool _asBool(dynamic value) {
+    return value == true ||
+        value == 1 ||
+        value?.toString() == '1' ||
+        value?.toString().toLowerCase() == 'true';
   }
 
   Offset _clampOffset(Offset o, Size size) {
@@ -262,9 +270,7 @@ class _FamilyPageState extends State<FamiliyPage> {
                 children: [
                   const Icon(Icons.people, size: 20, color: Colors.grey),
                   const SizedBox(width: 8),
-                  Text(
-                    'Capacidad actual: $numAlumnos de $limiteHijosEdi alumnos',
-                  ),
+                  Text('Hijos EDI: $numAlumnos de $limiteHijosEdi'),
                 ],
               ),
               const SizedBox(height: 20),
@@ -658,6 +664,28 @@ class _FamilyPageState extends State<FamiliyPage> {
           ),
         ),
         const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(
+            spacing: 8,
+            children: [
+              for (final filter in const ['TODAS', 'DISPONIBLES', 'LLENAS'])
+                ChoiceChip(
+                  label: Text(
+                    filter == 'TODAS'
+                        ? 'Todas'
+                        : filter == 'DISPONIBLES'
+                        ? 'Con cupo'
+                        : 'Llenas',
+                  ),
+                  selected: _availabilityFilter == filter,
+                  onSelected: (_) =>
+                      setState(() => _availabilityFilter = filter),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
         Expanded(
           child: FutureBuilder<List<dynamic>>(
             future: _availableFamiliesFuture,
@@ -672,14 +700,43 @@ class _FamilyPageState extends State<FamiliyPage> {
                 );
               }
 
+              final visibles = familias.where((f) {
+                final numAlumnos = _asInt(f['num_alumnos'], fallback: 0);
+                final limiteHijosEdi = _asInt(f['limite_hijos_edi']);
+                final llena =
+                    _asBool(f['esta_llena']) ||
+                    _asBool(f['cerrada_manualmente']) ||
+                    numAlumnos >= limiteHijosEdi;
+                if (_availabilityFilter == 'LLENAS') return llena;
+                if (_availabilityFilter == 'DISPONIBLES') return !llena;
+                return true;
+              }).toList();
+              if (visibles.isEmpty) {
+                return const Center(
+                  child: Text('No hay familias que coincidan con el filtro.'),
+                );
+              }
+
               return ListView.builder(
-                itemCount: familias.length,
+                itemCount: visibles.length,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemBuilder: (context, index) {
-                  final f = familias[index];
+                  final f = visibles[index];
                   final numAlumnos = _asInt(f['num_alumnos'], fallback: 0);
                   final limiteHijosEdi = _asInt(f['limite_hijos_edi']);
-                  final bool estaLleno = numAlumnos >= limiteHijosEdi;
+                  final bool estaLleno =
+                      _asBool(f['esta_llena']) ||
+                      _asBool(f['cerrada_manualmente']) ||
+                      numAlumnos >= limiteHijosEdi;
+                  final residenciaRaw =
+                      (f['tipo_residencia'] ?? f['residencia'] ?? '')
+                          .toString()
+                          .toUpperCase();
+                  final esInterna = residenciaRaw.startsWith('INT');
+                  final residenciaLabel = esInterna ? 'Interna' : 'Externa';
+                  final residenciaColor = esInterna
+                      ? Colors.blue.shade700
+                      : Colors.deepPurple;
 
                   final portadaRaw = _pickField(f, [
                     'foto_portada_url',
@@ -760,9 +817,28 @@ class _FamilyPageState extends State<FamiliyPage> {
                                   color: Colors.grey[800],
                                 ),
                               ),
+                              const SizedBox(height: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: residenciaColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '${esInterna ? '🏠' : '📍'} Residencia $residenciaLabel',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: residenciaColor,
+                                  ),
+                                ),
+                              ),
                               const SizedBox(height: 2),
                               Text(
-                                'Integrantes: $numAlumnos / $limiteHijosEdi',
+                                'Hijos EDI: $numAlumnos / $limiteHijosEdi',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey[800],
@@ -974,18 +1050,6 @@ class _FamilyPageState extends State<FamiliyPage> {
     return next.difference(today).inDays;
   }
 
-  static int _nextAge(DateTime birth) {
-    final today = DateTime(
-      DateTime.now().year,
-      DateTime.now().month,
-      DateTime.now().day,
-    );
-    final thisBirthday = DateTime(today.year, birth.month, birth.day);
-    return thisBirthday.isBefore(today)
-        ? today.year + 1 - birth.year
-        : today.year - birth.year;
-  }
-
   static String _formatBirthDate(DateTime d) {
     const meses = [
       '',
@@ -1026,7 +1090,6 @@ class _FamilyPageState extends State<FamiliyPage> {
           tipo: tipo,
           userId: userId,
           daysUntil: _daysUntil(dt),
-          nextAge: _nextAge(dt),
         ),
       );
     }
@@ -1191,7 +1254,7 @@ class _FamilyPageState extends State<FamiliyPage> {
                   ),
                 ),
                 Text(
-                  'Cumple ${e.nextAge} años hoy 🥳',
+                  '🎂 ${_formatBirthDate(e.birthDate)}',
                   style: TextStyle(fontSize: 13, color: Colors.brown.shade600),
                 ),
               ],
@@ -1280,14 +1343,6 @@ class _FamilyPageState extends State<FamiliyPage> {
                     '🎂  ${_formatBirthDate(e.birthDate)}',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                   ),
-                  Text(
-                    'Cumple ${e.nextAge} años',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: accentColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -1348,14 +1403,12 @@ class _BirthdayEntry {
   final String tipo;
   final int? userId;
   final int daysUntil;
-  final int nextAge;
 
   const _BirthdayEntry({
     required this.name,
     required this.birthDate,
     required this.tipo,
     required this.daysUntil,
-    required this.nextAge,
     this.photoUrl,
     this.userId,
   });

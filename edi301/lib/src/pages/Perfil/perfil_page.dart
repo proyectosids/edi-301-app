@@ -27,6 +27,7 @@ class _PerfilPageState extends State<PerfilPage> {
   static const _gold = Color.fromRGBO(245, 188, 6, 1);
 
   bool _isAlumno = false;
+  bool _isEmployee = false;
   int? _userId;
 
   final EstadosApi _estadosApi = EstadosApi();
@@ -161,6 +162,7 @@ class _PerfilPageState extends State<PerfilPage> {
       }
 
       final isAlumno = tipo.toUpperCase() == 'ALUMNO';
+      final isEmployee = tipo.toUpperCase() == 'EMPLEADO';
       final matricula = (u['matricula'] ?? u['Matricula'])?.toString();
       final numEmpleado =
           (u['num_empleado'] ?? u['numEmpleado'] ?? u['NumEmpleado'])
@@ -168,6 +170,7 @@ class _PerfilPageState extends State<PerfilPage> {
 
       setState(() {
         _isAlumno = isAlumno;
+        _isEmployee = isEmployee;
         _userId = id;
         data = {
           ...data,
@@ -221,6 +224,7 @@ class _PerfilPageState extends State<PerfilPage> {
           .toString()
           .toUpperCase();
       final isAlumno = tipo == 'ALUMNO';
+      final isEmployee = tipo == 'EMPLEADO';
       final matricula = (x['matricula'] ?? x['Matricula'] ?? data['matricula'])
           ?.toString();
       final numEmpleado =
@@ -232,6 +236,7 @@ class _PerfilPageState extends State<PerfilPage> {
 
       setState(() {
         _isAlumno = isAlumno;
+        _isEmployee = isEmployee;
         data = {
           ...data,
           'name': '$nombre $apellido'.trim().isNotEmpty
@@ -263,6 +268,191 @@ class _PerfilPageState extends State<PerfilPage> {
     await _hydrateFromLocal();
     await _fetchFromServer();
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _showContactEditor() async {
+    final currentPhone = data['phone']?.toString() ?? '';
+    final phoneController = TextEditingController(
+      text: currentPhone == '—' ? '' : currentPhone,
+    );
+    final currentAddress = data['address']?.toString() ?? '';
+    final addressController = TextEditingController(
+      text: currentAddress == '—' ? '' : currentAddress,
+    );
+    var residence =
+        (data['residence']?.toString().toLowerCase().startsWith('ext') ?? false)
+        ? 'Externa'
+        : 'Interna';
+
+    try {
+      final result = await showModalBottomSheet<Map<String, String>>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (context, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isEmployee
+                        ? 'Actualizar contacto y residencia'
+                        : 'Actualizar teléfono',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Número de teléfono',
+                      prefixIcon: Icon(Icons.call_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (_isEmployee) ...[
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: residence,
+                      decoration: const InputDecoration(
+                        labelText: 'Residencia',
+                        prefixIcon: Icon(Icons.home_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Interna',
+                          child: Text('Interna'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Externa',
+                          child: Text('Externa'),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setSheetState(() => residence = value ?? 'Interna'),
+                    ),
+                    if (residence == 'Externa') ...[
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: addressController,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                          labelText: 'Dirección',
+                          prefixIcon: Icon(Icons.location_on_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ],
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final phone = phoneController.text.trim();
+                        if (!RegExp(r'^[0-9+()\-\s]{7,20}$').hasMatch(phone)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Ingresa un teléfono válido de 7 a 20 caracteres.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        if (_isEmployee &&
+                            residence == 'Externa' &&
+                            addressController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'La dirección es requerida para residencia externa.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.pop(sheetContext, {
+                          'telefono': phone,
+                          if (_isEmployee) 'residencia': residence,
+                          if (_isEmployee && residence == 'Externa')
+                            'direccion': addressController.text.trim(),
+                        });
+                      },
+                      child: const Text('Guardar cambios'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      if (result == null) return;
+
+      final res = await _http.patchJson(
+        '/api/usuarios/me/contacto',
+        data: result,
+      );
+      if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+      final updated = jsonDecode(res.body) as Map<String, dynamic>;
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('user');
+      if (raw != null) {
+        final stored = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+        stored['telefono'] = updated['telefono'] ?? result['telefono'];
+        if (_isEmployee) {
+          stored['residencia'] = updated['residencia'] ?? result['residencia'];
+          stored['direccion'] = updated['direccion'] ?? result['direccion'];
+        }
+        await prefs.setString('user', jsonEncode(stored));
+      }
+      if (!mounted) return;
+      setState(() {
+        data = {
+          ...data,
+          'phone': (updated['telefono'] ?? result['telefono']).toString(),
+          if (_isEmployee)
+            'residence': (updated['residencia'] ?? result['residencia'])
+                .toString(),
+          if (_isEmployee)
+            'address': (updated['direccion'] ?? result['direccion'] ?? '—')
+                .toString(),
+        };
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Datos de contacto actualizados.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      phoneController.dispose();
+      addressController.dispose();
+    }
   }
 
   // ── Logout ───────────────────────────────────────────────────────────────
@@ -306,9 +496,9 @@ class _PerfilPageState extends State<PerfilPage> {
 
   // ── Eliminar cuenta (navega a la página dedicada con verificación OTP) ──
   Future<void> _handleDeleteAccount() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DeleteAccountPage()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const DeleteAccountPage()));
   }
 
   // ── Estado selector ──────────────────────────────────────────────────────
@@ -553,6 +743,20 @@ class _PerfilPageState extends State<PerfilPage> {
                             value: s('address'),
                             accent: const Color(0xFF5D4037),
                           ),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(
+                            Icons.edit_outlined,
+                            color: _primary,
+                          ),
+                          title: Text(
+                            _isEmployee
+                                ? 'Actualizar teléfono y residencia'
+                                : 'Actualizar teléfono',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _showContactEditor,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -636,10 +840,8 @@ class _PerfilPageState extends State<PerfilPage> {
                         Icons.chevron_right_rounded,
                         color: _primary,
                       ),
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        'mis_renovaciones',
-                      ),
+                      onTap: () =>
+                          Navigator.pushNamed(context, 'mis_renovaciones'),
                     ),
 
                     const SizedBox(height: 12),

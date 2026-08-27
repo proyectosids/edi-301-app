@@ -528,6 +528,67 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
     }
   }
 
+  Future<void> _handleManualCapacity() async {
+    final fam = _family;
+    if (fam?.id == null) return;
+    final willClose = !fam!.cerradaManualmente;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          willClose ? '¿Marcar familia como llena?' : '¿Reabrir cupos?',
+        ),
+        content: Text(
+          willClose
+              ? 'La familia dejará de mostrarse con cupo aunque aún tenga lugares disponibles.'
+              : 'La familia volverá a mostrarse con cupo si no ha alcanzado su límite de hijos EDI.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: willClose ? Colors.orange : Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(willClose ? 'Marcar como llena' : 'Reabrir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      setState(() => _isLoading = true);
+      await _familiaApi.setFamilyManualFull(fam.id!, isFull: willClose);
+      await _fetchFamilyDetails(fam.id!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              willClose ? 'Familia marcada como llena.' : 'Cupos reabiertos.',
+            ),
+            backgroundColor: willClose ? Colors.orange : Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyError(e)),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    }
+  }
+
   // ── Tab 1: Integrantes (original content) ──────────────────────────────────
   Widget _buildIntegrantesTab(Family fam) {
     return ListView(
@@ -642,6 +703,33 @@ class _FamilyDetailPageState extends State<FamilyDetailPage>
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           onPressed: _handleEdit,
+        ),
+
+        const SizedBox(height: 8),
+
+        OutlinedButton.icon(
+          icon: Icon(
+            fam.cerradaManualmente ? Icons.lock_open : Icons.lock,
+            color: fam.cerradaManualmente ? Colors.green : Colors.orange,
+          ),
+          label: Text(
+            fam.cerradaManualmente
+                ? 'Reabrir cupos manualmente'
+                : 'Marcar familia como llena',
+            style: TextStyle(
+              color: fam.cerradaManualmente ? Colors.green : Colors.orange,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(
+              color: fam.cerradaManualmente ? Colors.green : Colors.orange,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          onPressed: _handleManualCapacity,
         ),
 
         const SizedBox(height: 8),

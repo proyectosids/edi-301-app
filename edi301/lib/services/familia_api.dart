@@ -238,6 +238,17 @@ class FamiliaApi {
     if (res.statusCode >= 400) throw Exception(parseHttpError(res));
   }
 
+  /// Cierra una familia aunque tenga cupo, o la reabre manualmente.
+  Future<void> setFamilyManualFull(int id, {required bool isFull}) async {
+    final res = await _http.patchJson(
+      '/api/familias/$id/cupo-manual',
+      data: {'cerrada_manualmente': isFull},
+    );
+    if (res.statusCode >= 400) throw Exception(parseHttpError(res));
+    _availableCache = null;
+    _availableEtag = null;
+  }
+
   // ── Hijos del hogar sin cuenta ─────────────────────────────────────────────
 
   /// Crea un hijo del hogar (sin cuenta) para la familia dada.

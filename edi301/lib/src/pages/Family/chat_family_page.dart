@@ -414,59 +414,65 @@ class _ChatFamilyPageState extends State<ChatFamilyPage> {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.75,
             ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: colorFondo,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(18),
-                  topRight: const Radius.circular(18),
-                  bottomLeft: esMio
-                      ? const Radius.circular(18)
-                      : const Radius.circular(2),
-                  bottomRight: esMio
-                      ? const Radius.circular(2)
-                      : const Radius.circular(18),
+            child: IntrinsicWidth(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 2,
-                    offset: const Offset(1, 1),
+                decoration: BoxDecoration(
+                  color: colorFondo,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: esMio
+                        ? const Radius.circular(18)
+                        : const Radius.circular(2),
+                    bottomRight: esMio
+                        ? const Radius.circular(2)
+                        : const Radius.circular(18),
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!esMio)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        nombreUsuario,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorNombre,
-                          fontWeight: FontWeight.bold,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 2,
+                      offset: const Offset(1, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!esMio)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          nombreUsuario,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorNombre,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
+
+                    Text(
+                      msg['mensaje'] ?? '',
+                      style: TextStyle(fontSize: 15, color: colorTexto),
                     ),
 
-                  Text(
-                    msg['mensaje'] ?? '',
-                    style: TextStyle(fontSize: 15, color: colorTexto),
-                  ),
+                    const SizedBox(height: 4),
 
-                  const SizedBox(height: 4),
-
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Text(
-                      hora,
-                      style: TextStyle(fontSize: 10, color: colorHora),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Text(
+                        hora,
+                        style: TextStyle(fontSize: 10, color: colorHora),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

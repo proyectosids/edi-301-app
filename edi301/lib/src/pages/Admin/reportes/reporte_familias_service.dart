@@ -19,10 +19,10 @@ class FamiliaReporteGeneral {
 
   FamiliaReporteGeneral.fromJson(Map<String, dynamic> j)
     : idFamilia = int.tryParse('${j['id_familia']}') ?? 0,
-      nombreFamilia = j['nombre_familia'],
-      papaNombre = j['papa_nombre'],
-      mamaNombre = j['mama_nombre'],
-      totalMiembros = j['total_miembros'];
+      nombreFamilia = (j['nombre_familia'] ?? 'Sin nombre').toString(),
+      papaNombre = j['papa_nombre']?.toString(),
+      mamaNombre = j['mama_nombre']?.toString(),
+      totalMiembros = int.tryParse('${j['total_miembros']}') ?? 0;
 
   String get responsable {
     if (papaNombre != null) return papaNombre!;
@@ -55,8 +55,19 @@ class ReporteFamiliasService {
     if (res.statusCode >= 400) {
       throw Exception('Error al obtener datos: ${res.body}');
     }
-    final List<dynamic> list = jsonDecode(res.body);
-    return list.map((json) => FamiliaReporteGeneral.fromJson(json)).toList();
+    final decoded = jsonDecode(res.body);
+    final list = decoded is List
+        ? decoded
+        : decoded is Map && decoded['data'] is List
+        ? decoded['data'] as List
+        : <dynamic>[];
+    return list
+        .whereType<Map>()
+        .map(
+          (json) =>
+              FamiliaReporteGeneral.fromJson(Map<String, dynamic>.from(json)),
+        )
+        .toList();
   }
 
   Future<Family> _fetchReporteIndividualData(int familiaId) async {
@@ -83,7 +94,9 @@ class ReporteFamiliasService {
         theme: theme,
         pageFormat: PdfPageFormat.a4,
         header: (context) => _buildHeader('Listas de familias EDI 301'),
-        build: (context) => [_buildTableGeneral(familias)],
+        // Las filas se entregan como widgets independientes: así MultiPage
+        // puede repartirlas entre páginas aun cuando haya muchas familias.
+        build: (context) => _buildGeneralWidgets(familias),
       ),
     );
 
@@ -147,78 +160,88 @@ class ReporteFamiliasService {
     );
   }
 
-  pw.Widget _buildTableGeneral(List<FamiliaReporteGeneral> familias) {
-    final headers = [
-      'Nombre de la familia',
-      'Responsable',
-      'Numero de integrantes',
-      'Recibio',
-    ];
-
-    final data = familias
-        .map(
-          (f) => [
-            f.nombreFamilia,
-            f.responsable,
-            f.totalMiembros.toString(),
-            '',
-          ],
-        )
-        .toList();
-
+  List<pw.Widget> _buildGeneralWidgets(List<FamiliaReporteGeneral> familias) {
     final totalIntegrantes = familias.fold<int>(
       0,
       (sum, f) => sum + f.totalMiembros,
     );
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Table.fromTextArray(
-          headers: headers,
-          data: data,
-          border: pw.TableBorder.all(color: PdfColors.grey600, width: 1),
-          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-          cellStyle: const pw.TextStyle(fontSize: 10),
-          headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-          cellHeight: 30,
-          cellAlignments: {
-            0: pw.Alignment.centerLeft,
-            1: pw.Alignment.centerLeft,
-            2: pw.Alignment.center,
-            3: pw.Alignment.center,
-          },
-        ),
-        pw.SizedBox(height: 8),
-        pw.Container(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.grey300,
-              border: pw.Border.all(color: PdfColors.grey600, width: 1),
-              borderRadius: pw.BorderRadius.circular(4),
-            ),
-            child: pw.RichText(
-              text: pw.TextSpan(
-                children: [
-                  pw.TextSpan(
-                    text: 'Total de integrantes: ',
-                    style: const pw.TextStyle(fontSize: 11),
+    return [
+      _buildGeneralHeaderRow(),
+      ...familias.map(_buildGeneralRow),
+      pw.SizedBox(height: 8),
+      pw.Container(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey300,
+            border: pw.Border.all(color: PdfColors.grey600, width: 1),
+            borderRadius: pw.BorderRadius.circular(4),
+          ),
+          child: pw.RichText(
+            text: pw.TextSpan(
+              children: [
+                pw.TextSpan(
+                  text: 'Total de integrantes: ',
+                  style: const pw.TextStyle(fontSize: 11),
+                ),
+                pw.TextSpan(
+                  text: '$totalIntegrantes',
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
                   ),
-                  pw.TextSpan(
-                    text: '$totalIntegrantes',
-                    style: pw.TextStyle(
-                      fontSize: 11,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
+    ];
+  }
+
+  pw.Widget _buildGeneralHeaderRow() => _generalRow(const [
+    'Nombre de la familia',
+    'Responsable',
+    'Número de integrantes',
+    'Recibió',
+  ], header: true);
+
+  pw.Widget _buildGeneralRow(FamiliaReporteGeneral familia) => _generalRow([
+    familia.nombreFamilia,
+    familia.responsable,
+    familia.totalMiembros.toString(),
+    '',
+  ]);
+
+  pw.Widget _generalRow(List<String> values, {bool header = false}) {
+    const widths = [4, 3, 2, 2];
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        color: header ? PdfColors.grey300 : null,
+        border: pw.Border.all(color: PdfColors.grey600, width: 0.6),
+      ),
+      child: pw.Row(
+        children: List.generate(values.length, (index) {
+          return pw.Expanded(
+            flex: widths[index],
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: pw.Text(
+                values[index],
+                textAlign: index >= 2 ? pw.TextAlign.center : pw.TextAlign.left,
+                style: pw.TextStyle(
+                  fontSize: header ? 9 : 8,
+                  fontWeight: header
+                      ? pw.FontWeight.bold
+                      : pw.FontWeight.normal,
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
     );
   }
 
@@ -228,7 +251,6 @@ class ReporteFamiliasService {
       columnWidths: {
         0: const pw.FixedColumnWidth(100),
         1: const pw.FlexColumnWidth(),
-        2: const pw.FixedColumnWidth(60),
       },
       children: [
         pw.TableRow(
@@ -248,32 +270,21 @@ class ReporteFamiliasService {
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               ),
             ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(
-                'No. Empleado',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-            ),
           ],
         ),
-        _buildPadreRow('Padre', familia.fatherName, familia.papaNumEmpleado),
-        _buildPadreRow('Madre', familia.motherName, familia.mamaNumEmpleado),
+        _buildPadreRow('Padre', familia.fatherName),
+        _buildPadreRow('Madre', familia.motherName),
       ],
     );
   }
 
-  pw.TableRow _buildPadreRow(String rol, String? nombre, String? idStr) {
+  pw.TableRow _buildPadreRow(String rol, String? nombre) {
     return pw.TableRow(
       children: [
         pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(rol)),
         pw.Padding(
           padding: const pw.EdgeInsets.all(5),
           child: pw.Text(nombre ?? 'No asignado'),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(idStr ?? 'N/A'),
         ),
       ],
     );
